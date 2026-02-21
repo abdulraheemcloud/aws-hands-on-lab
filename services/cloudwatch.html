@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AWS CloudWatch Hands-On Lab: Set up monitoring dashboards, create alarms, configure notifications, and analyze logs with practical examples.">
+    <title>CloudWatch Lab - Monitoring & Observability | Cloud Hands-On Lab</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="../index.html" class="nav-logo">
+                <span class="logo-icon">☁️</span>
+                <span class="logo-text">Cloud<span class="highlight">Lab</span></span>
+            </a>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+                <span class="hamburger"></span>
+            </button>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="../index.html" class="nav-link">Home</a></li>
+                <li class="dropdown">
+                    <a href="#" class="nav-link active">Services ▼</a>
+                    <ul class="dropdown-menu">
+                        <li><a href="ec2.html">EC2</a></li>
+                        <li><a href="s3.html">S3</a></li>
+                        <li><a href="iam.html">IAM</a></li>
+                        <li><a href="vpc.html">VPC</a></li>
+                        <li><a href="rds.html">RDS</a></li>
+                        <li><a href="cloudwatch.html">CloudWatch</a></li>
+                        <li><a href="loadbalancer.html">Load Balancer</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <header class="page-header">
+        <h1>📊 CloudWatch Hands-On Lab</h1>
+        <p>Monitor resources, set up alarms, and analyze logs</p>
+    </header>
+
+    <div class="lab-content">
+        <aside class="sidebar">
+            <h3>Lab Contents</h3>
+            <nav>
+                <ul class="sidebar-nav">
+                    <li><a href="#objective">Objective</a></li>
+                    <li><a href="#architecture">Architecture</a></li>
+                    <li><a href="#metrics">View Metrics</a></li>
+                    <li><a href="#dashboard">Create Dashboard</a></li>
+                    <li><a href="#alarms">Set Up Alarms</a></li>
+                    <li><a href="#logs">Log Insights</a></li>
+                    <li><a href="#cli">CLI Commands</a></li>
+                    <li><a href="#mistakes">Common Mistakes</a></li>
+                    <li><a href="#tasks">Hands-On Tasks</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <section class="lab-section" id="objective">
+                <h2>🎯 Objective</h2>
+                <p>Implement comprehensive monitoring for AWS resources using CloudWatch. Create custom dashboards, set up intelligent alarms with SNS notifications, and analyze logs using CloudWatch Logs Insights.</p>
+            </section>
+
+            <section class="lab-section" id="architecture">
+                <h2>🏗️ Monitoring Architecture</h2>
+                <div class="arch-diagram">
+                    <div class="diagram-container">
+                        <div class="diagram-box">EC2/RDS/ELB</div>
+                        <div class="diagram-arrow">→</div>
+                        <div class="diagram-box primary">CloudWatch<br><small>Metrics & Logs</small></div>
+                        <div class="diagram-arrow">→</div>
+                        <div style="display: flex; flex-direction: column; gap: 1rem;">
+                            <div class="diagram-box">Dashboards</div>
+                            <div class="diagram-box">Alarms → SNS</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="lab-section" id="metrics">
+                <h2>📈 View Metrics</h2>
+                <p>CloudWatch collects metrics automatically for AWS services. You can also publish custom metrics.</p>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">CLI - View Metrics</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code><span class="comment"># List available namespaces</span>
+<span class="command">aws cloudwatch list-metrics</span> --namespace AWS/EC2
+
+<span class="comment"># Get CPU utilization for specific instance</span>
+<span class="command">aws cloudwatch get-metric-statistics</span> \
+    --namespace AWS/EC2 \
+    --metric-name CPUUtilization \
+    --dimensions Name=InstanceId,Value=i-xxxxxxxx \
+    --statistics Average \
+    --start-time 2024-01-15T00:00:00Z \
+    --end-time 2024-01-15T23:59:59Z \
+    --period 3600
+
+<span class="comment"># Publish custom metric</span>
+<span class="command">aws cloudwatch put-metric-data</span> \
+    --namespace MyApplication \
+    --metric-name PageLoadTime \
+    --value 250 \
+    --unit Milliseconds \
+    --dimensions Service=WebServer</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <section class="lab-section" id="dashboard">
+                <h2>📊 Create Dashboard</h2>
+                
+                <h3>Console Steps</h3>
+                <ol>
+                    <li>CloudWatch Console → Dashboards → <strong>Create dashboard</strong></li>
+                    <li>Dashboard name: <code>Production-Overview</code></li>
+                    <li>Add widget: <strong>Line</strong> (for metrics)</li>
+                    <li>Select metrics: EC2 → Per-Instance Metrics → CPUUtilization</li>
+                    <li>Add more widgets: RDS CPU, S3 BucketSizeBytes, ELB RequestCount</li>
+                    <li>Customize time ranges and refresh intervals</li>
+                    <li>Save dashboard</li>
+                </ol>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">Dashboard JSON (CloudFormation)</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code>{
+  <span class="string">"widgets"</span>: [
+    {
+      <span class="string">"type"</span>: <span class="string">"metric"</span>,
+      <span class="string">"x"</span>: 0,
+      <span class="string">"y"</span>: 0,
+      <span class="string">"width"</span>: 12,
+      <span class="string">"height"</span>: 6,
+      <span class="string">"properties"</span>: {
+        <span class="string">"metrics"</span>: [
+          [<span class="string">"AWS/EC2"</span>, <span class="string">"CPUUtilization"</span>, <span class="string">"InstanceId"</span>, <span class="string">"i-xxxxxxxx"</span>]
+        ],
+        <span class="string">"period"</span>: 300,
+        <span class="string">"stat"</span>: <span class="string">"Average"</span>,
+        <span class="string">"region"</span>: <span class="string">"us-east-1"</span>,
+        <span class="string">"title"</span>: <span class="string">"EC2 CPU Utilization"</span>
+      }
+    }
+  ]
+}</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <section class="lab-section" id="alarms">
+                <h2>🚨 Set Up Alarms</h2>
+                <p>Alarms watch metrics and trigger actions when thresholds are breached.</p>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">Create CPU Alarm</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code><span class="comment"># Create SNS topic for notifications first</span>
+<span class="command">aws sns create-topic</span> --name cloudwatch-alarms
+
+<span class="command">aws sns subscribe</span> \
+    --topic-arn arn:aws:sns:us-east-1:123456789012:cloudwatch-alarms \
+    --protocol email \
+    --notification-endpoint admin@example.com
+
+<span class="comment"># Create CloudWatch alarm</span>
+<span class="command">aws cloudwatch put-metric-alarm</span> \
+    --alarm-name high-cpu-utilization \
+    --alarm-description "Alarm when CPU exceeds 70%" \
+    --metric-name CPUUtilization \
+    --namespace AWS/EC2 \
+    --statistic Average \
+    --period 300 \
+    --threshold 70 \
+    --comparison-operator GreaterThanThreshold \
+    --dimensions Name=InstanceId,Value=i-xxxxxxxx \
+    --evaluation-periods 2 \
+    --alarm-actions arn:aws:sns:us-east-1:123456789012:cloudwatch-alarms \
+    --unit Percent</code></pre>
+                    </div>
+                </div>
+
+                <h3>Common Alarm Types</h3>
+                <table style="width: 100%; border-collapse: collapse; margin: 1rem 0;">
+                    <thead style="background: var(--aws-navy); color: white;">
+                        <tr>
+                            <th style="padding: 1rem; text-align: left;">Resource</th>
+                            <th style="padding: 1rem; text-align: left;">Metric</th>
+                            <th style="padding: 1rem; text-align: left;">Threshold</th>
+                            <th style="padding: 1rem; text-align: left;">Use Case</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="border-bottom: 1px solid var(--aws-border);">
+                            <td style="padding: 1rem;">EC2</td>
+                            <td style="padding: 1rem;">CPUUtilization</td>
+                            <td style="padding: 1rem;">> 70%</td>
+                            <td style="padding: 1rem;">Scale up or investigate</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--aws-border);">
+                            <td style="padding: 1rem;">EC2</td>
+                            <td style="padding: 1rem;">StatusCheckFailed</td>
+                            <td style="padding: 1rem;">> 0</td>
+                            <td style="padding: 1rem;">Instance recovery needed</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--aws-border);">
+                            <td style="padding: 1rem;">RDS</td>
+                            <td style="padding: 1rem;">FreeStorageSpace</td>
+                            <td style="padding: 1rem;">< 5GB</td>
+                            <td style="padding: 1rem;">Storage expansion</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 1rem;">ELB</td>
+                            <td style="padding: 1rem;">UnHealthyHostCount</td>
+                            <td style="padding: 1rem;">> 0</td>
+                            <td style="padding: 1rem;">Health check failures</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section class="lab-section" id="logs">
+                <h2>📋 CloudWatch Logs Insights</h2>
+                <p>Analyze log data using SQL-like queries.</p>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">Log Insights Queries</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code><span class="comment"># Find ERROR messages in last hour</span>
+<span class="keyword">fields</span> @timestamp, @message
+<span class="keyword">filter</span> @message <span class="keyword">like</span> /ERROR/
+<span class="keyword">sort</span> @timestamp <span class="keyword">desc</span>
+<span class="keyword">limit</span> 20
+
+<span class="comment"># Parse Apache logs for 404 errors</span>
+<span class="keyword">fields</span> @message
+<span class="keyword">parse</span> @message "* - * [*] \"* * *\" * *" as ip, identity, time, method, path, protocol, status, bytes
+<span class="keyword">filter</span> status = 404
+<span class="keyword">stats</span> <span class="command">count</span>() <span class="keyword">as</span> errorCount <span class="keyword">by</span> path
+<span class="keyword">sort</span> errorCount <span class="keyword">desc</span>
+
+<span class="comment"># Lambda duration statistics</span>
+<span class="keyword">filter</span> @type = "REPORT"
+<span class="keyword">stats</span> <span class="command">avg</span>(@duration), <span class="command">max</span>(@duration), <span class="command">min</span>(@duration) <span class="keyword">by</span> bin(5m)</code></pre>
+                    </div>
+                </div>
+
+                <div class="info-box tip">
+                    <div class="info-box-title">💡 Log Agent Installation</div>
+                    <p>Install CloudWatch Agent on EC2 to send system logs and custom metrics:<br>
+                    <code>sudo yum install amazon-cloudwatch-agent -y</code></p>
+                </div>
+            </section>
+
+            <section class="lab-section" id="cli">
+                <h2>⌨️ CloudWatch CLI</h2>
+                
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">CloudWatch Operations</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code><span class="comment"># List alarms</span>
+<span class="command">aws cloudwatch describe-alarms</span>
+
+<span class="comment"># Disable alarm</span>
+<span class="command">aws cloudwatch disable-alarm-actions</span> --alarm-names high-cpu-utilization
+
+<span class="comment"># Delete alarm</span>
+<span class="command">aws cloudwatch delete-alarms</span> --alarm-names high-cpu-utilization
+
+<span class="comment"># Create log group</span>
+<span class="command">aws logs create-log-group</span> --log-group-name /aws/myapp/logs
+
+<span class="command"># Create log stream</span>
+<span class="command">aws logs create-log-stream</span> \
+    --log-group-name /aws/myapp/logs \
+    --log-stream-name instance-1
+
+<span class="comment"># Put log event</span>
+<span class="command">aws logs put-log-events</span> \
+    --log-group-name /aws/myapp/logs \
+    --log-stream-name instance-1 \
+    --log-events timestamp=1705315200000,message="Application started"</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <section class="lab-section" id="mistakes">
+                <h2>❌ Common Mistakes</h2>
+                
+                <div class="info-box error">
+                    <div class="info-box-title">Alarm Not Triggering</div>
+                    <p><strong>Cause:</strong> Insufficient data points or wrong statistic (Average vs Sum).<br>
+                    <strong>Fix:</strong> Check evaluation periods and ensure metric is being published. Use "Treat missing data as" settings appropriately.</p>
+                </div>
+
+                <div class="info-box error">
+                    <div class="info-box-title">No Email Notifications</div>
+                    <p><strong>Cause:</strong> SNS subscription not confirmed.<br>
+                    <strong>Fix:</strong> Check email and click confirmation link. Verify alarm actions include correct SNS ARN.</p>
+                </div>
+
+                <div class="info-box error">
+                    <div class="info-box-title">High CloudWatch Costs</div>
+                    <p><strong>Cause:</strong> Too many custom metrics or high-resolution alarms (1-second).<br>
+                    <strong>Fix:</strong> Use standard resolution (5-minute) where possible. Delete unused dashboards and alarms.</p>
+                </div>
+            </section>
+
+            <section class="lab-section" id="tasks">
+                <h2>🎯 Hands-On Tasks</h2>
+                
+                <div class="task-checklist">
+                    <h4>Task Checklist</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="cw-task1"> <label for="cw-task1">Create a dashboard with 4+ widgets showing different services</label></li>
+                        <li><input type="checkbox" id="cw-task2"> <label for="cw-task2">Set up CPU and Memory alarms for an EC2 instance with email notifications</label></li>
+                        <li><input type="checkbox" id="cw-task3"> <label for="cw-task3">Install CloudWatch agent and send custom application logs</label></li>
+                        <li><input type="checkbox" id="cw-task4"> <label for="cw-task4">Write a Logs Insights query to find top 10 slowest requests</label></li>
+                        <li><input type="checkbox" id="cw-task5"> <label for="cw-task5">Create a composite alarm (CPU AND Memory high)</label></li>
+                        <li><input type="checkbox" id="cw-task6"> <label for="cw-task6">Set up a canary (synthetic monitoring) for a website</label></li>
+                    </ul>
+                </div>
+
+                <div class="info-box tip">
+                    <div class="info-box-title">💡 Observability Best Practices</div>
+                    <p>Use CloudWatch Container Insights for ECS/EKS, X-Ray for distributed tracing, and set up anomaly detection for dynamic thresholds instead of static values.</p>
+                </div>
+            </section>
+
+            <div style="margin-top: 4rem; padding: 2rem; background: var(--aws-light); border-radius: 12px; text-align: center;">
+                <h3>Next Steps</h3>
+                <p>Distribute traffic across instances with the <a href="loadbalancer.html" style="color: var(--aws-orange); font-weight: 600;">Load Balancer Lab →</a></p>
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p>&copy; 2024 Cloud Hands-On Lab. Built for GitHub Pages.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../js/script.js"></script>
+</body>
+</html>
