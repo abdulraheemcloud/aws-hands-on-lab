@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AWS RDS Hands-On Lab: Launch managed databases, configure security groups, connect from EC2, and manage backups with practical examples.">
+    <title>RDS Lab - Managed Databases | Cloud Hands-On Lab</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="../index.html" class="nav-logo">
+                <span class="logo-icon">☁️</span>
+                <span class="logo-text">Cloud<span class="highlight">Lab</span></span>
+            </a>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+                <span class="hamburger"></span>
+            </button>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="../index.html" class="nav-link">Home</a></li>
+                <li class="dropdown">
+                    <a href="#" class="nav-link active">Services ▼</a>
+                    <ul class="dropdown-menu">
+                        <li><a href="ec2.html">EC2</a></li>
+                        <li><a href="s3.html">S3</a></li>
+                        <li><a href="iam.html">IAM</a></li>
+                        <li><a href="vpc.html">VPC</a></li>
+                        <li><a href="rds.html">RDS</a></li>
+                        <li><a href="cloudwatch.html">CloudWatch</a></li>
+                        <li><a href="loadbalancer.html">Load Balancer</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <header class="page-header">
+        <h1>🗄️ RDS Hands-On Lab</h1>
+        <p>Deploy and manage relational databases in the cloud</p>
+    </header>
+
+    <div class="lab-content">
+        <aside class="sidebar">
+            <h3>Lab Contents</h3>
+            <nav>
+                <ul class="sidebar-nav">
+                    <li><a href="#objective">Objective</a></li>
+                    <li><a href="#architecture">Architecture</a></li>
+                    <li><a href="#launch">Launch Database</a></li>
+                    <li><a href="#security">Security Groups</a></li>
+                    <li><a href="#connect">Connect from EC2</a></li>
+                    <li><a href="#backup">Backups & Snapshots</a></li>
+                    <li><a href="#cli">CLI Commands</a></li>
+                    <li><a href="#mistakes">Common Mistakes</a></li>
+                    <li><a href="#tasks">Hands-On Tasks</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <section class="lab-section" id="objective">
+                <h2>🎯 Objective</h2>
+                <p>Deploy a production-ready MySQL database using Amazon RDS. Configure security groups for secure access, connect from EC2 instances, and implement backup strategies.</p>
+            </section>
+
+            <section class="lab-section" id="architecture">
+                <h2>🏗️ RDS Architecture</h2>
+                <div class="arch-diagram">
+                    <div class="diagram-container">
+                        <div class="diagram-box">EC2 Instance<br><small>(Web Server)</small></div>
+                        <div class="diagram-arrow">→</div>
+                        <div class="diagram-box primary">RDS MySQL<br><small>Port 3306</small></div>
+                        <div class="diagram-arrow">←</div>
+                        <div class="diagram-box">Automated<br>Backups</div>
+                    </div>
+                </div>
+                <p style="margin-top: 1rem;">RDS instances should be placed in private subnets. Access is controlled via security groups allowing only specific EC2 instances or IP ranges.</p>
+            </section>
+
+            <section class="lab-section" id="launch">
+                <h2>🚀 Launch RDS Instance</h2>
+                
+                <h3>Console Steps</h3>
+                <ol>
+                    <li>RDS Console → <strong>Create database</strong></li>
+                    <li>Choose database creation method: <strong>Standard create</strong></li>
+                    <li>Engine options: <strong>MySQL</strong> (or PostgreSQL)</li>
+                    <li>Templates: <strong>Free tier</strong> (for learning)</li>
+                    <li>DB instance identifier: <code>production-db</code></li>
+                    <li>Master username: <code>admin</code></li>
+                    <li>Master password: <strong>Use auto-generate or strong password</strong></li>
+                    <li>Instance class: <code>db.t3.micro</code></li>
+                    <li>Storage: 20 GB gp2</li>
+                    <li>Connectivity: 
+                        <ul>
+                            <li>Don't connect to EC2 (we'll do this manually)</li>
+                            <li>VPC: Select your custom VPC</li>
+                            <li>Public access: <strong>No</strong> (security best practice)</li>
+                            <li>Existing VPC security groups: Create new</li>
+                        </ul>
+                    </li>
+                    <li>Database authentication: <strong>Password authentication</strong></li>
+                    <li>Monitoring: Enable Enhanced monitoring (optional)</li>
+                    <li>Backup: Enable automated backups, 7 days retention</li>
+                    <li>Create database</li>
+                </ol>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">AWS CLI - Create RDS</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code><span class="comment"># Create subnet group first (required)</span>
+<span class="command">aws rds create-db-subnet-group</span> \
+    --db-subnet-group-name my-db-subnet-group \
+    --db-subnet-group-description "Subnet group for RDS" \
+    --subnet-ids '["subnet-xxxxxxxx","subnet-yyyyyyyy"]'
+
+<span class="comment"># Create security group for RDS</span>
+<span class="command">aws ec2 create-security-group</span> \
+    --group-name rds-mysql-sg \
+    --description "Security group for RDS MySQL" \
+    --vpc-id vpc-xxxxxxxx
+
+<span class="comment"># Create RDS instance</span>
+<span class="command">aws rds create-db-instance</span> \
+    --db-instance-identifier production-db \
+    --db-instance-class db.t3.micro \
+    --engine mysql \
+    --master-username admin \
+    --master-user-password 'YourStrongPassword123!' \
+    --allocated-storage 20 \
+    --vpc-security-group-ids sg-xxxxxxxx \
+    --db-subnet-group-name my-db-subnet-group \
+    --backup-retention-period 7 \
+    --no-publicly-accessible \
+    --tags Key=Environment,Value=Production</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <section class="lab-section" id="security">
+                <h2>🛡️ Security Group Configuration</h2>
+                <p>RDS security groups should only allow access from application servers, not from the internet.</p>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">Security Group Rules</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code><span class="comment"># Allow MySQL access from EC2 security group only</span>
+<span class="command">aws ec2 authorize-security-group-ingress</span> \
+    --group-id sg-rds-xxxxxxxx \
+    --protocol tcp \
+    --port 3306 \
+    --source-group sg-ec2-xxxxxxxx
+
+<span class="comment"># Alternative: Allow from specific IP (not recommended for production)</span>
+<span class="command">aws ec2 authorize-security-group-ingress</span> \
+    --group-id sg-rds-xxxxxxxx \
+    --protocol tcp \
+    --port 3306 \
+    --cidr 10.0.1.0/24</code></pre>
+                    </div>
+                </div>
+
+                <div class="info-box warning">
+                    <div class="info-box-title">⚠️ Security Warning</div>
+                    <p>Never enable public accessibility for production databases. Use bastion hosts or VPN for administrative access. Rotate credentials regularly using AWS Secrets Manager.</p>
+                </div>
+            </section>
+
+            <section class="lab-section" id="connect">
+                <h2>🔌 Connect from EC2</h2>
+                
+                <h3>Install MySQL Client</h3>
+                <div class="collapsible">
+                    <button class="collapsible-header">
+                        <span>Amazon Linux</span>
+                        <span class="collapsible-icon">▼</span>
+                    </button>
+                    <div class="collapsible-content">
+                        <div class="collapsible-body">
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span class="code-label">Install Client</span>
+                                    <button class="copy-btn">📋 Copy</button>
+                                </div>
+                                <div class="code-content">
+                                    <pre><code><span class="command">sudo yum install mysql -y</span></code></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="collapsible">
+                    <button class="collapsible-header">
+                        <span>Ubuntu</span>
+                        <span class="collapsible-icon">▼</span>
+                    </button>
+                    <div class="collapsible-content">
+                        <div class="collapsible-body">
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span class="code-label">Install Client</span>
+                                    <button class="copy-btn">📋 Copy</button>
+                                </div>
+                                <div class="code-content">
+                                    <pre><code><span class="command">sudo apt update && sudo apt install mysql-client -y</span></code></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>Connect and Test</h3>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">MySQL Connection</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code><span class="comment"># Connect to RDS (get endpoint from RDS Console)</span>
+<span class="command">mysql -h</span> production-db.XXXXXXXX.us-east-1.rds.amazonaws.com \
+      -u admin -p
+
+<span class="comment"># Enter password when prompted</span>
+
+<span class="comment"># Once connected, create test database</span>
+<span class="keyword">CREATE DATABASE</span> myapp;
+<span class="keyword">USE</span> myapp;
+<span class="keyword">CREATE TABLE</span> users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100),
+    email VARCHAR(100)
+);
+<span class="keyword">INSERT INTO</span> users (name, email) <span class="keyword">VALUES</span> ('Test User', 'test@example.com');
+<span class="keyword">SELECT</span> * <span class="keyword">FROM</span> users;
+
+<span class="comment"># Exit</span>
+<span class="keyword">EXIT;</span></code></pre>
+                    </div>
+                </div>
+
+                <div class="info-box tip">
+                    <div class="info-box-title">💡 Connection String Format</div>
+                    <p>Application connection string:<br>
+                    <code>mysql://admin:password@hostname:3306/database</code></p>
+                </div>
+            </section>
+
+            <section class="lab-section" id="backup">
+                <h2>💾 Backups & Snapshots</h2>
+                
+                <h3>Automated Backups</h3>
+                <p>Automated backups are enabled by default with RDS. They include daily snapshots and transaction logs for point-in-time recovery.</p>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">Backup Operations</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code><span class="comment"># Create manual snapshot</span>
+<span class="command">aws rds create-db-snapshot</span> \
+    --db-snapshot-identifier my-manual-snapshot \
+    --db-instance-identifier production-db
+
+<span class="comment"># List snapshots</span>
+<span class="command">aws rds describe-db-snapshots</span> \
+    --db-instance-identifier production-db
+
+<span class="comment"># Restore from snapshot (creates new instance)</span>
+<span class="command">aws rds restore-db-instance-from-db-snapshot</span> \
+    --db-instance-identifier production-db-restored \
+    --db-snapshot-identifier my-manual-snapshot
+
+<span class="comment"># Point-in-time recovery (to specific time)</span>
+<span class="command">aws rds restore-db-instance-to-point-in-time</span> \
+    --source-db-instance-identifier production-db \
+    --target-db-instance-identifier production-db-pitr \
+    --restore-time 2024-01-15T12:00:00Z</code></pre>
+                    </div>
+                </div>
+
+                <div class="info-box info">
+                    <div class="info-box-title">ℹ️ Backup Retention</div>
+                    <p>Automated backups are retained for the specified period (max 35 days). Manual snapshots persist until deleted. Store critical snapshots in separate regions for disaster recovery.</p>
+                </div>
+            </section>
+
+            <section class="lab-section" id="cli">
+                <h2>⌨️ RDS CLI Commands</h2>
+                
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">RDS Management</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code><span class="comment"># List all RDS instances</span>
+<span class="command">aws rds describe-db-instances</span>
+
+<span class="comment"># Get specific instance details</span>
+<span class="command">aws rds describe-db-instances</span> \
+    --db-instance-identifier production-db
+
+<span class="command"># Modify instance (scale up)</span>
+<span class="command">aws rds modify-db-instance</span> \
+    --db-instance-identifier production-db \
+    --db-instance-class db.t3.small \
+    --apply-immediately
+
+<span class="comment"># Reboot instance</span>
+<span class="command">aws rds reboot-db-instance</span> \
+    --db-instance-identifier production-db
+
+<span class="comment"># Delete instance (with final snapshot)</span>
+<span class="command">aws rds delete-db-instance</span> \
+    --db-instance-identifier production-db \
+    --final-db-snapshot-identifier final-snapshot \
+    --delete-automated-backups</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <section class="lab-section" id="mistakes">
+                <h2>❌ Common Mistakes</h2>
+                
+                <div class="info-box error">
+                    <div class="info-box-title">Cannot Connect to Database</div>
+                    <p><strong>Cause:</strong> Security group blocking port 3306 or RDS in private subnet without proper routing.<br>
+                    <strong>Fix:</strong> Verify security group allows EC2 security group. Ensure EC2 and RDS are in same VPC.</p>
+                </div>
+
+                <div class="info-box error">
+                    <div class="info-box-title">Public Accessibility Enabled</div>
+                    <p><strong>Cause:</strong> Database exposed to internet during creation.<br>
+                    <strong>Fix:</strong> Modify instance to disable public accessibility immediately.</p>
+                </div>
+
+                <div class="info-box error">
+                    <div class="info-box-title">Storage Full</div>
+                    <p><strong>Cause:</strong> Automated backups consuming space or actual data growth.<br>
+                    <strong>Fix:</strong> Enable storage autoscaling or modify instance to increase allocated storage.</p>
+                </div>
+
+                <div class="info-box error">
+                    <div class="info-box-title">Slow Performance</div>
+                    <p><strong>Cause:</strong> Insufficient instance class or no read replicas for read-heavy workloads.<br>
+                    <strong>Fix:</strong> Upgrade instance class or create read replicas. Enable Performance Insights.</p>
+                </div>
+            </section>
+
+            <section class="lab-section" id="tasks">
+                <h2>🎯 Hands-On Tasks</h2>
+                
+                <div class="task-checklist">
+                    <h4>Task Checklist</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="rds-task1"> <label for="rds-task1">Create a Multi-AZ deployment for high availability</label></li>
+                        <li><input type="checkbox" id="rds-task2"> <label for="rds-task2">Set up a read replica and verify replication lag</label></li>
+                        <li><input type="checkbox" id="rds-task3"> <label for="rds-task3">Configure automated backups with 14-day retention</label></li>
+                        <li><input type="checkbox" id="rds-task4"> <label for="rds-task4">Create a CloudWatch alarm for high CPU utilization</label></li>
+                        <li><input type="checkbox" id="rds-task5"> <label for="rds-task5">Perform point-in-time recovery to a specific timestamp</label></li>
+                        <li><input type="checkbox" id="rds-task6"> <label for="rds-task6">Enable encryption at rest and in transit</label></li>
+                    </ul>
+                </div>
+
+                <div class="info-box tip">
+                    <div class="info-box-title">💡 Production Checklist</div>
+                    <p>Before deploying to production: Enable Multi-AZ, configure monitoring, set up parameter groups, enable deletion protection, use Secrets Manager for credentials, and configure event subscriptions.</p>
+                </div>
+            </section>
+
+            <div style="margin-top: 4rem; padding: 2rem; background: var(--aws-light); border-radius: 12px; text-align: center;">
+                <h3>Next Steps</h3>
+                <p>Monitor your infrastructure with the <a href="cloudwatch.html" style="color: var(--aws-orange); font-weight: 600;">CloudWatch Monitoring Lab →</a></p>
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p>&copy; 2024 Cloud Hands-On Lab. Built for GitHub Pages.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../js/script.js"></script>
+</body>
+</html>
