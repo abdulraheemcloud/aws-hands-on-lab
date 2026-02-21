@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AWS S3 Hands-On Lab: Create buckets, enable static website hosting, configure bucket policies, and manage access control with practical examples.">
+    <title>S3 Lab - Storage & Static Hosting | Cloud Hands-On Lab</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="../index.html" class="nav-logo">
+                <span class="logo-icon">☁️</span>
+                <span class="logo-text">Cloud<span class="highlight">Lab</span></span>
+            </a>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+                <span class="hamburger"></span>
+            </button>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="../index.html" class="nav-link">Home</a></li>
+                <li class="dropdown">
+                    <a href="#" class="nav-link active">Services ▼</a>
+                    <ul class="dropdown-menu">
+                        <li><a href="ec2.html">EC2</a></li>
+                        <li><a href="s3.html">S3</a></li>
+                        <li><a href="iam.html">IAM</a></li>
+                        <li><a href="vpc.html">VPC</a></li>
+                        <li><a href="rds.html">RDS</a></li>
+                        <li><a href="cloudwatch.html">CloudWatch</a></li>
+                        <li><a href="loadbalancer.html">Load Balancer</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <header class="page-header">
+        <h1>📦 S3 Hands-On Lab</h1>
+        <p>Object storage, static website hosting, and access management</p>
+    </header>
+
+    <div class="lab-content">
+        <aside class="sidebar">
+            <h3>Lab Contents</h3>
+            <nav>
+                <ul class="sidebar-nav">
+                    <li><a href="#objective">Objective</a></li>
+                    <li><a href="#architecture">Architecture</a></li>
+                    <li><a href="#create">Create Bucket</a></li>
+                    <li><a href="#upload">Upload Files</a></li>
+                    <li><a href="#static">Static Website</a></li>
+                    <li><a href="#policy">Bucket Policy</a></li>
+                    <li><a href="#cli">CLI Commands</a></li>
+                    <li><a href="#mistakes">Common Mistakes</a></li>
+                    <li><a href="#tasks">Hands-On Tasks</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <section class="lab-section" id="objective">
+                <h2>🎯 Objective</h2>
+                <p>Create and configure S3 buckets for various use cases including static website hosting. Learn to manage permissions through bucket policies and ACLs while understanding S3 security best practices.</p>
+            </section>
+
+            <section class="lab-section" id="architecture">
+                <h2>🏗️ Architecture Overview</h2>
+                <div class="arch-diagram">
+                    <div class="diagram-container">
+                        <div class="diagram-box">Users</div>
+                        <div class="diagram-arrow">→</div>
+                        <div class="diagram-box primary">S3 Bucket<br><small>(Static Website)</small></div>
+                        <div class="diagram-arrow">→</div>
+                        <div class="diagram-box">HTML/CSS/JS<br><small>Objects</small></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="lab-section" id="create">
+                <h2>🪣 Create S3 Bucket</h2>
+                
+                <h3>Console Steps</h3>
+                <ol>
+                    <li>Navigate to S3 Console → Click <strong>"Create bucket"</strong></li>
+                    <li>Bucket name: <code>my-unique-website-bucket-123</code> (must be globally unique)</li>
+                    <li>AWS Region: Select closest to your users</li>
+                    <li>Uncheck <strong>"Block all public access"</strong> (for static website)</li>
+                    <li>Enable <strong>"Bucket Versioning"</strong> (optional but recommended)</li>
+                    <li>Click <strong>"Create bucket"</strong></li>
+                </ol>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">AWS CLI</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code><span class="comment"># Create bucket (replace with unique name)</span>
+<span class="command">aws s3 mb</span> s3://my-unique-website-bucket-123 --region us-east-1
+
+<span class="comment"># Enable versioning</span>
+<span class="command">aws s3api put-bucket-versioning</span> \
+    --bucket my-unique-website-bucket-123 \
+    --versioning-configuration Status=Enabled
+
+<span class="comment"># List buckets</span>
+<span class="command">aws s3 ls</span></code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <section class="lab-section" id="upload">
+                <h2>📤 Upload Files</h2>
+                
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">AWS CLI - Upload Operations</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code><span class="comment"># Upload single file</span>
+<span class="command">aws s3 cp</span> index.html s3://my-unique-website-bucket-123/
+
+<span class="comment"># Upload with specific content type</span>
+<span class="command">aws s3 cp</span> style.css s3://my-unique-website-bucket-123/ --content-type "text/css"
+
+<span class="comment"># Upload entire folder</span>
+<span class="command">aws s3 sync</span> ./website-folder s3://my-unique-website-bucket-123/
+
+<span class="comment"># List objects</span>
+<span class="command">aws s3 ls</span> s3://my-unique-website-bucket-123/ --recursive
+
+<span class="comment"># Download file</span>
+<span class="command">aws s3 cp</span> s3://my-unique-website-bucket-123/index.html ./</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <section class="lab-section" id="static">
+                <h2>🌐 Static Website Hosting</h2>
+                
+                <h3>Enable Static Hosting</h3>
+                <ol>
+                    <li>Go to bucket → <strong>Properties</strong> tab</li>
+                    <li>Scroll to <strong>"Static website hosting"</strong> → Click <strong>Edit</strong></li>
+                    <li>Select <strong>"Enable"</strong></li>
+                    <li>Index document: <code>index.html</code></li>
+                    <li>Error document: <code>error.html</code> (optional)</li>
+                    <li>Save changes</li>
+                    <li>Note the <strong>Bucket website endpoint</strong> URL</li>
+                </ol>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">Sample index.html</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code>&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+    &lt;meta charset="UTF-8"&gt;
+    &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+    &lt;title&gt;S3 Static Website&lt;/title&gt;
+    &lt;style&gt;
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #232f3e 0%, #ff9900 100%);
+            color: white;
+            text-align: center;
+            padding: 50px;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.1);
+            padding: 40px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        h1 { font-size: 3em; margin-bottom: 20px; }
+        .badge {
+            background: #ff9900;
+            color: #232f3e;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            display: inline-block;
+            margin-top: 20px;
+        }
+    &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;div class="container"&gt;
+        &lt;h1&gt;🚀 Hello from S3!&lt;/h1&gt;
+        &lt;p&gt;This static website is hosted on Amazon S3&lt;/p&gt;
+        &lt;div class="badge"&gt;Serverless Architecture&lt;/div&gt;
+    &lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <section class="lab-section" id="policy">
+                <h2>🔒 Bucket Policy</h2>
+                <p>To make your static website accessible, you need a bucket policy that allows public read access.</p>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">Bucket Policy JSON</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code>{
+    <span class="string">"Version"</span>: <span class="string">"2012-10-17"</span>,
+    <span class="string">"Statement"</span>: [
+        {
+            <span class="string">"Sid"</span>: <span class="string">"PublicReadGetObject"</span>,
+            <span class="string">"Effect"</span>: <span class="string">"Allow"</span>,
+            <span class="string">"Principal"</span>: <span class="string">"*"</span>,
+            <span class="string">"Action"</span>: <span class="string">"s3:GetObject"</span>,
+            <span class="string">"Resource"</span>: <span class="string">"arn:aws:s3:::my-unique-website-bucket-123/*"</span>
+        }
+    ]
+}</code></pre>
+                    </div>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">Apply Policy via CLI</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code><span class="comment"># Save policy to file and apply</span>
+<span class="command">aws s3api put-bucket-policy</span> \
+    --bucket my-unique-website-bucket-123 \
+    --policy file://policy.json
+
+<span class="comment"># Remove public access block (required for public buckets)</span>
+<span class="command">aws s3api delete-public-access-block</span> \
+    --bucket my-unique-website-bucket-123</code></pre>
+                    </div>
+                </div>
+
+                <div class="info-box warning">
+                    <div class="info-box-title">⚠️ Security Warning</div>
+                    <p>Only allow public access for static website hosting. For private data, use pre-signed URLs or IAM authentication instead of public bucket policies.</p>
+                </div>
+            </section>
+
+            <section class="lab-section" id="cli">
+                <h2>⌨️ Essential S3 CLI Commands</h2>
+                
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">Complete S3 CLI Reference</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code><span class="comment"># Create bucket</span>
+<span class="command">aws s3 mb</span> s3://bucket-name
+
+<span class="comment"># Remove bucket (must be empty)</span>
+<span class="command">aws s3 rb</span> s3://bucket-name
+
+<span class="comment"># Remove bucket and all contents (DANGER)</span>
+<span class="command">aws s3 rb</span> s3://bucket-name --force
+
+<span class="comment"># Copy file to S3</span>
+<span class="command">aws s3 cp</span> localfile.txt s3://bucket-name/
+
+<span class="comment"># Copy from S3 to local</span>
+<span class="command">aws s3 cp</span> s3://bucket-name/file.txt ./
+
+<span class="comment"># Sync local folder with S3 (mirrors content)</span>
+<span class="command">aws s3 sync</span> ./local-folder s3://bucket-name/
+
+<span class="comment"># Delete object</span>
+<span class="command">aws s3 rm</span> s3://bucket-name/file.txt
+
+<span class="comment"># Delete all objects with prefix</span>
+<span class="command">aws s3 rm</span> s3://bucket-name/logs/ --recursive
+
+<span class="comment"># Presigned URL (temporary access)</span>
+<span class="command">aws s3 presign</span> s3://bucket-name/private-file.txt --expires-in 3600
+
+<span class="comment"># Get bucket location</span>
+<span class="command">aws s3api get-bucket-location</span> --bucket bucket-name</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <section class="lab-section" id="mistakes">
+                <h2>❌ Common Mistakes</h2>
+                
+                <div class="info-box error">
+                    <div class="info-box-title">403 Forbidden Error</div>
+                    <p><strong>Cause:</strong> Bucket policy missing or public access blocks enabled.<br>
+                    <strong>Fix:</strong> Add the bucket policy above AND disable "Block public access" settings in Permissions tab.</p>
+                </div>
+
+                <div class="info-box error">
+                    <div class="info-box-title">Bucket Name Already Exists</div>
+                    <p><strong>Cause:</strong> S3 bucket names are globally unique across all AWS accounts.<br>
+                    <strong>Fix:</strong> Add random numbers or your company name: <code>mycompany-website-2024-12345</code></p>
+                </div>
+
+                <div class="info-box error">
+                    <div class="info-box-title">Website Endpoint vs REST API Endpoint</div>
+                    <p><strong>Cause:</strong> Using the wrong URL format.<br>
+                    <strong>Fix:</strong> Use the website endpoint format: <code>http://bucket-name.s3-website-region.amazonaws.com</code> not the REST endpoint.</p>
+                </div>
+            </section>
+
+            <section class="lab-section" id="tasks">
+                <h2>🎯 Hands-On Tasks</h2>
+                
+                <div class="task-checklist">
+                    <h4>Task Checklist</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="s3-task1"> <label for="s3-task1">Create a bucket with versioning enabled and upload 3 versions of the same file</label></li>
+                        <li><input type="checkbox" id="s3-task2"> <label for="s3-task2">Host a complete multi-page static website (index, about, contact)</label></li>
+                        <li><input type="checkbox" id="s3-task3"> <label for="s3-task3">Configure a custom error page (404.html) and test it</label></li>
+                        <li><input type="checkbox" id="s3-task4"> <label for="s3-task4">Use <code>aws s3 sync</code> to deploy a local folder with 10+ files</label></li>
+                        <li><input type="checkbox" id="s3-task5"> <label for="s3-task5">Generate a pre-signed URL for a private file and test access expiration</label></li>
+                        <li><input type="checkbox" id="s3-task6"> <label for="s3-task6">Set up lifecycle policy to move old versions to Glacier after 30 days</label></li>
+                    </ul>
+                </div>
+
+                <div class="info-box tip">
+                    <div class="info-box-title">💡 Advanced Challenge</div>
+                    <p>Configure Cross-Origin Resource Sharing (CORS) to allow your S3-hosted website to call an API Gateway endpoint. This is essential for modern single-page applications (SPAs).</p>
+                </div>
+            </section>
+
+            <div style="margin-top: 4rem; padding: 2rem; background: var(--aws-light); border-radius: 12px; text-align: center;">
+                <h3>Next Steps</h3>
+                <p>Secure your AWS resources with proper access controls in the <a href="iam.html" style="color: var(--aws-orange); font-weight: 600;">IAM Security Lab →</a></p>
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p>&copy; 2024 Cloud Hands-On Lab. Built for GitHub Pages.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../js/script.js"></script>
+</body>
+</html>
