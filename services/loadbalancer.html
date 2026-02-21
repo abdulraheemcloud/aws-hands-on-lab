@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AWS Load Balancer Hands-On Lab: Create target groups, register EC2 instances, configure health checks, and distribute traffic with practical examples.">
+    <title>Load Balancer Lab - Traffic Distribution | Cloud Hands-On Lab</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="../index.html" class="nav-logo">
+                <span class="logo-icon">☁️</span>
+                <span class="logo-text">Cloud<span class="highlight">Lab</span></span>
+            </a>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+                <span class="hamburger"></span>
+            </button>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="../index.html" class="nav-link">Home</a></li>
+                <li class="dropdown">
+                    <a href="#" class="nav-link active">Services ▼</a>
+                    <ul class="dropdown-menu">
+                        <li><a href="ec2.html">EC2</a></li>
+                        <li><a href="s3.html">S3</a></li>
+                        <li><a href="iam.html">IAM</a></li>
+                        <li><a href="vpc.html">VPC</a></li>
+                        <li><a href="rds.html">RDS</a></li>
+                        <li><a href="cloudwatch.html">CloudWatch</a></li>
+                        <li><a href="loadbalancer.html">Load Balancer</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <header class="page-header">
+        <h1>⚖️ Load Balancer Hands-On Lab</h1>
+        <p>Distribute traffic across multiple instances for high availability</p>
+    </header>
+
+    <div class="lab-content">
+        <aside class="sidebar">
+            <h3>Lab Contents</h3>
+            <nav>
+                <ul class="sidebar-nav">
+                    <li><a href="#objective">Objective</a></li>
+                    <li><a href="#architecture">Architecture</a></li>
+                    <li><a href="#target">Target Groups</a></li>
+                    <li><a href="#alb">Create ALB</a></li>
+                    <li><a href="#register">Register Targets</a></li>
+                    <li><a href="#health">Health Checks</a></li>
+                    <li><a href="#cli">CLI Commands</a></li>
+                    <li><a href="#mistakes">Common Mistakes</a></li>
+                    <li><a href="#tasks">Hands-On Tasks</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <section class="lab-section" id="objective">
+                <h2>🎯 Objective</h2>
+                <p>Deploy an Application Load Balancer (ALB) to distribute HTTP/HTTPS traffic across multiple EC2 instances. Configure health checks to ensure traffic only routes to healthy instances.</p>
+            </section>
+
+            <section class="lab-section" id="architecture">
+                <h2>🏗️ Load Balancer Architecture</h2>
+                <div class="arch-diagram">
+                    <div class="diagram-container">
+                        <div class="diagram-box">Users</div>
+                        <div class="diagram-arrow">→</div>
+                        <div class="diagram-box primary">Application<br>Load Balancer</div>
+                        <div class="diagram-arrow">→</div>
+                        <div style="display: flex; flex-direction: column; gap: 1rem;">
+                            <div class="diagram-box">EC2-1<br>🟢 Healthy</div>
+                            <div class="diagram-box">EC2-2<br>🟢 Healthy</div>
+                            <div class="diagram-box" style="opacity: 0.5;">EC2-3<br>🔴 Unhealthy</div>
+                        </div>
+                    </div>
+                </div>
+                <p style="margin-top: 1rem;">The ALB distributes incoming traffic across healthy instances in multiple Availability Zones. Unhealthy instances are automatically removed from rotation.</p>
+            </section>
+
+            <section class="lab-section" id="target">
+                <h2>🎯 Create Target Group</h2>
+                <p>Target groups route requests to registered targets (EC2 instances, IP addresses, or Lambda functions).</p>
+
+                <h3>Console Steps</h3>
+                <ol>
+                    <li>EC2 Console → Target Groups → <strong>Create target group</strong></li>
+                    <li>Choose target type: <strong>Instances</strong></li>
+                    <li>Target group name: <code>web-servers-tg</code></li>
+                    <li>Protocol: <strong>HTTP</strong>, Port: <strong>80</strong></li>
+                    <li>VPC: Select your VPC</li>
+                    <li>Protocol version: <strong>HTTP/1.1</strong></li>
+                    <li>Health checks:
+                        <ul>
+                            <li>Health check protocol: HTTP</li>
+                            <li>Health check path: <code>/</code> or <code>/health.html</code></li>
+                            <li>Healthy threshold: 2</li>
+                            <li>Unhealthy threshold: 3</li>
+                            <li>Timeout: 5 seconds</li>
+                            <li>Interval: 30 seconds</li>
+                        </ul>
+                    </li>
+                    <li>Next: Register targets (we'll do this after creating instances)</li>
+                </ol>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">CLI - Target Group</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code><span class="comment"># Create target group</span>
+<span class="command">aws elbv2 create-target-group</span> \
+    --name web-servers-tg \
+    --protocol HTTP \
+    --port 80 \
+    --vpc-id vpc-xxxxxxxx \
+    --health-check-protocol HTTP \
+    --health-check-path / \
+    --healthy-threshold-count 2 \
+    --unhealthy-threshold-count 3 \
+    --health-check-timeout-seconds 5 \
+    --health-check-interval-seconds 30
+
+<span class="comment"># Get target group ARN (save this)</span>
+<span class="command">aws elbv2 describe-target-groups</span> --names web-servers-tg</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <section class="lab-section" id="alb">
+                <h2>⚖️ Create Application Load Balancer</h2>
+                
+                <h3>Prerequisites</h3>
+                <ul>
+                    <li>At least 2 public subnets in different AZs</li>
+                    <li>Security group allowing HTTP (port 80) from internet (0.0.0.0/0)</li>
+                    <li>Target group created in previous step</li>
+                </ul>
+
+                <h3>Console Steps</h3>
+                <ol>
+                    <li>EC2 Console → Load Balancers → <strong>Create Load Balancer</strong></li>
+                    <li>Choose <strong>Application Load Balancer</strong></li>
+                    <li>Name: <code>web-alb</code></li>
+                    <li>Scheme: <strong>Internet-facing</strong></li>
+                    <li>IP address type: <strong>IPv4</strong></li>
+                    <li>Network mapping:
+                        <ul>
+                            <li>VPC: Your VPC</li>
+                            <li>Select at least 2 AZs and public subnets</li>
+                        </ul>
+                    </li>
+                    <li>Security groups: Select ALB security group (allow HTTP/80)</li>
+                    <li>Listeners and routing:
+                        <ul>
+                            <li>Protocol: HTTP, Port: 80</li>
+                            <li>Default action: Forward to <code>web-servers-tg</code></li>
+                        </ul>
+                    </li>
+                    <li>Create load balancer</li>
+                </ol>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">CLI - Create ALB</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code><span class="comment"># Create security group for ALB</span>
+<span class="command">aws ec2 create-security-group</span> \
+    --group-name alb-sg \
+    --description "Security group for ALB" \
+    --vpc-id vpc-xxxxxxxx
+
+<span class="comment"># Allow HTTP inbound</span>
+<span class="command">aws ec2 authorize-security-group-ingress</span> \
+    --group-id sg-alb-xxxxxxxx \
+    --protocol tcp \
+    --port 80 \
+    --cidr 0.0.0.0/0
+
+<span class="comment"># Create ALB</span>
+<span class="command">aws elbv2 create-load-balancer</span> \
+    --name web-alb \
+    --subnets subnet-public1-xxx subnet-public2-xxx \
+    --security-groups sg-alb-xxxxxxxx \
+    --scheme internet-facing \
+    --type application \
+    --ip-address-type ipv4
+
+<span class="comment"># Create listener (get ALB ARN from previous command)</span>
+<span class="command">aws elbv2 create-listener</span> \
+    --load-balancer-arn arn:aws:elasticloadbalancing:... \
+    --protocol HTTP \
+    --port 80 \
+    --default-actions Type=forward,TargetGroupArn=arn:aws:elasticloadbalancing:...</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <section class="lab-section" id="register">
+                <h2>📝 Register Targets</h2>
+                <p>Register your EC2 instances with the target group to start receiving traffic.</p>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">Register EC2 Instances</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code><span class="comment"># Register targets (instance IDs)</span>
+<span class="command">aws elbv2 register-targets</span> \
+    --target-group-arn arn:aws:elasticloadbalancing:us-east-1:123456789012:targetgroup/web-servers-tg/xxxxxxxx \
+    --targets Id=i-xxxxxxxx Id=i-yyyyyyyy
+
+<span class="comment"># Verify registration</span>
+<span class="command">aws elbv2 describe-target-health</span> \
+    --target-group-arn arn:aws:elasticloadbalancing:us-east-1:123456789012:targetgroup/web-servers-tg/xxxxxxxx</code></pre>
+                    </div>
+                </div>
+
+                <div class="info-box tip">
+                    <div class="info-box-title">💡 Target Registration</div>
+                    <p>Ensure instances have web servers running (Apache/Nginx) and security groups allow traffic from the ALB security group on port 80.</p>
+                </div>
+            </section>
+
+            <section class="lab-section" id="health">
+                <h2>🏥 Health Checks</h2>
+                <p>Health checks determine if instances are healthy and should receive traffic.</p>
+
+                <h3>Health Check Settings Explained</h3>
+                <ul>
+                    <li><strong>Protocol/Port:</strong> Must match your application (HTTP/80 or HTTPS/443)</li>
+                    <li><strong>Path:</strong> Should return HTTP 200 OK (e.g., / or /health.html)</li>
+                    <li><strong>Interval:</strong> How often to check (30 seconds recommended)</li>
+                    <li><strong>Timeout:</strong> How long to wait for response (5 seconds)</li>
+                    <li><strong>Healthy threshold:</strong> Consecutive successes before marking healthy (2-3)</li>
+                    <li><strong>Unhealthy threshold:</strong> Consecutive failures before marking unhealthy (3)</li>
+                </ul>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">Create Health Check Page</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code><span class="comment"># Create health check endpoint</span>
+<span class="command">sudo tee</span> /var/www/html/health.html &lt;&lt; 'EOF'
+&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;&lt;title&gt;Health Check&lt;/title&gt;&lt;/head&gt;
+&lt;body&gt;OK&lt;/body&gt;
+&lt;/html&gt;
+EOF
+
+<span class="comment"># Set proper permissions</span>
+<span class="command">sudo chmod 644</span> /var/www/html/health.html
+
+<span class="comment"># Test locally</span>
+<span class="command">curl -I http://localhost/health.html</span>
+<span class="output">HTTP/1.1 200 OK</span></code></pre>
+                    </div>
+                </div>
+
+                <div class="info-box warning">
+                    <div class="info-box-title">⚠️ Health Check Failures</div>
+                    <p>If all targets show "unhealthy", check:
+                    <ul>
+                        <li>Security groups allow ALB to reach instances on health check port</li>
+                        <li>Health check path returns HTTP 200 (not 301/302 redirects)</li>
+                        <li>Instance web server is actually running</li>
+                    </ul></p>
+                </div>
+            </section>
+
+            <section class="lab-section" id="cli">
+                <h2>⌨️ Load Balancer CLI</h2>
+                
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">ELB Operations</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code><span class="comment"># List all load balancers</span>
+<span class="command">aws elbv2 describe-load-balancers</span>
+
+<span class="comment"># Describe specific ALB</span>
+<span class="command">aws elbv2 describe-load-balancers</span> --names web-alb
+
+<span class="comment"># Get ALB DNS name (for testing)</span>
+<span class="command">aws elbv2 describe-load-balancers</span> \
+    --names web-alb \
+    --query 'LoadBalancers[0].DNSName' \
+    --output text
+
+<span class="comment"># Modify target group attributes</span>
+<span class="command">aws elbv2 modify-target-group-attributes</span> \
+    --target-group-arn arn:aws:elasticloadbalancing:... \
+    --attributes Key=deregistration_delay.timeout_seconds,Value=30
+
+<span class="comment"># Deregister target (for maintenance)</span>
+<span class="command">aws elbv2 deregister-targets</span> \
+    --target-group-arn arn:aws:elasticloadbalancing:... \
+    --targets Id=i-xxxxxxxx
+
+<span class="comment"># Delete load balancer</span>
+<span class="command">aws elbv2 delete-load-balancer</span> --load-balancer-arn arn:aws:elasticloadbalancing:...
+
+<span class="comment"># Delete target group</span>
+<span class="command">aws elbv2 delete-target-group</span> --target-group-arn arn:aws:elasticloadbalancing:...</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <section class="lab-section" id="mistakes">
+                <h2>❌ Common Mistakes</h2>
+                
+                <div class="info-box error">
+                    <div class="info-box-title">502 Bad Gateway</div>
+                    <p><strong>Cause:</strong> Target group protocol/port doesn't match instance configuration, or security group blocking traffic.<br>
+                    <strong>Fix:</strong> Verify instance security group allows inbound from ALB security group. Check target group port matches application port.</p>
+                </div>
+
+                <div class="info-box error">
+                    <div class="info-box-title">All Targets Unhealthy</div>
+                    <p><strong>Cause:</strong> Health check path returns non-200 status, or instances in private subnets without NAT.<br>
+                    <strong>Fix:</strong> Test health check path manually. Ensure instances can reach internet for updates if needed.</p>
+                </div>
+
+                <div class="info-box error">
+                    <div class="info-box-title">ALB in Only One AZ</div>
+                    <p><strong>Cause:</strong> Subnets selected in only one Availability Zone.<br>
+                    <strong>Fix:</strong> ALB requires at least two subnets in different AZs for high availability.</p>
+                </div>
+
+                <div class="info-box error">
+                    <div class="info-box-title">HTTP 503 Service Unavailable</div>
+                    <p><strong>Cause:</strong> No healthy targets registered, or target group empty.<br>
+                    <strong>Fix:</strong> Register targets and verify they pass health checks.</p>
+                </div>
+            </section>
+
+            <section class="lab-section" id="tasks">
+                <h2>🎯 Hands-On Tasks</h2>
+                
+                <div class="task-checklist">
+                    <h4>Task Checklist</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="alb-task1"> <label for="alb-task1">Create ALB with 2 EC2 instances in different AZs</label></li>
+                        <li><input type="checkbox" id="alb-task2"> <label for="alb-task2">Configure HTTPS listener with SSL certificate (ACM)</label></li>
+                        <li><input type="checkbox" id="alb-task3"> <label for="alb-task3">Set up path-based routing (/api → API servers, / → Web servers)</label></li>
+                        <li><input type="checkbox" id="alb-task4"> <label for="alb-task4">Configure stickiness (session affinity) for application</label></li>
+                        <li><input type="checkbox" id="alb-task5"> <label for="alb-task5">Set up access logs to S3 and analyze with Athena</label></li>
+                        <li><input type="checkbox" id="alb-task6"> <label for="alb-task6">Create Auto Scaling Group attached to target group</label></li>
+                    </ul>
+                </div>
+
+                <div class="info-box tip">
+                    <div class="info-box-title">💡 Advanced Features</div>
+                    <p>ALB supports host-based routing, containerized applications (ECS/EKS), Lambda targets, and WebSocket connections. Use Network Load Balancer (NLB) for TCP/UDP traffic or extreme performance requirements.</p>
+                </div>
+            </section>
+
+            <div style="margin-top: 4rem; padding: 2rem; background: var(--aws-light); border-radius: 12px; text-align: center;">
+                <h3>Lab Complete!</h3>
+                <p>You've mastered the core AWS services. Return to <a href="../index.html" style="color: var(--aws-orange); font-weight: 600;">Home</a> to review other labs.</p>
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p>&copy; 2024 Cloud Hands-On Lab. Built for GitHub Pages.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../js/script.js"></script>
+</body>
+</html>
