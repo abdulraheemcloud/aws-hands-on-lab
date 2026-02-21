@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AWS IAM Hands-On Lab: Create users, manage roles, write custom policies, and implement least privilege access with practical examples.">
+    <title>IAM Lab - Identity & Access Management | Cloud Hands-On Lab</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="../index.html" class="nav-logo">
+                <span class="logo-icon">☁️</span>
+                <span class="logo-text">Cloud<span class="highlight">Lab</span></span>
+            </a>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+                <span class="hamburger"></span>
+            </button>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="../index.html" class="nav-link">Home</a></li>
+                <li class="dropdown">
+                    <a href="#" class="nav-link active">Services ▼</a>
+                    <ul class="dropdown-menu">
+                        <li><a href="ec2.html">EC2</a></li>
+                        <li><a href="s3.html">S3</a></li>
+                        <li><a href="iam.html">IAM</a></li>
+                        <li><a href="vpc.html">VPC</a></li>
+                        <li><a href="rds.html">RDS</a></li>
+                        <li><a href="cloudwatch.html">CloudWatch</a></li>
+                        <li><a href="loadbalancer.html">Load Balancer</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <header class="page-header">
+        <h1>🔐 IAM Hands-On Lab</h1>
+        <p>Secure your AWS resources with proper identity and access management</p>
+    </header>
+
+    <div class="lab-content">
+        <aside class="sidebar">
+            <h3>Lab Contents</h3>
+            <nav>
+                <ul class="sidebar-nav">
+                    <li><a href="#objective">Objective</a></li>
+                    <li><a href="#architecture">Architecture</a></li>
+                    <li><a href="#users">Create Users</a></li>
+                    <li><a href="#groups">User Groups</a></li>
+                    <li><a href="#policies">Custom Policies</a></li>
+                    <li><a href="#roles">IAM Roles</a></li>
+                    <li><a href="#cli">CLI Commands</a></li>
+                    <li><a href="#mistakes">Common Mistakes</a></li>
+                    <li><a href="#tasks">Hands-On Tasks</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <section class="lab-section" id="objective">
+                <h2>🎯 Objective</h2>
+                <p>Implement secure access controls for AWS resources. Learn to create users with appropriate permissions, delegate access using roles, and write custom JSON policies following the principle of least privilege.</p>
+                
+                <div class="info-box warning">
+                    <div class="info-box-title">⚠️ Security Critical</div>
+                    <p>IAM misconfigurations are a leading cause of cloud security breaches. Never use root account for daily operations. Always apply least privilege access.</p>
+                </div>
+            </section>
+
+            <section class="lab-section" id="architecture">
+                <h2>🏗️ IAM Architecture</h2>
+                <div class="arch-diagram">
+                    <div class="diagram-container">
+                        <div class="diagram-box">IAM User</div>
+                        <div class="diagram-arrow">→</div>
+                        <div class="diagram-box">IAM Group<br><small>(Developer)</small></div>
+                        <div class="diagram-arrow">→</div>
+                        <div class="diagram-box primary">IAM Policy<br><small>(Permissions)</small></div>
+                        <div class="diagram-arrow">→</div>
+                        <div class="diagram-box">AWS Resources</div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="lab-section" id="users">
+                <h2>👤 Create IAM Users</h2>
+                
+                <h3>Console Steps</h3>
+                <ol>
+                    <li>Navigate to IAM Console → Users → Add users</li>
+                    <li>User name: <code>developer-1</code></li>
+                    <li>Select credential type: <strong>Access key - Programmatic access</strong> and <strong>Password - AWS Management Console access</strong></li>
+                    <li>Console password: <strong>Custom password</strong></li>
+                    <li>Require password reset: <strong>Yes</strong> (recommended)</li>
+                    <li>Next: Permissions → Add user to group (create if needed)</li>
+                    <li>Tags: Add <code>Department: Engineering</code></li>
+                    <li>Review and Create</li>
+                    <li><strong>IMPORTANT:</strong> Download .csv file containing access keys (shown only once)</li>
+                </ol>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">AWS CLI - Create User</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code><span class="comment"># Create user</span>
+<span class="command">aws iam create-user</span> --user-name developer-1
+
+<span class="comment"># Create login profile (console access)</span>
+<span class="command">aws iam create-login-profile</span> \
+    --user-name developer-1 \
+    --password 'TempPass123!' \
+    --password-reset-required
+
+<span class="comment"># Create access keys (CLI/programmatic)</span>
+<span class="command">aws iam create-access-key</span> --user-name developer-1
+
+<span class="comment"># List users</span>
+<span class="command">aws iam list-users</span></code></pre>
+                    </div>
+                </div>
+
+                <div class="info-box tip">
+                    <div class="info-box-title">💡 Access Key Security</div>
+                    <p>Access keys consist of Access Key ID (starts with AKIA) and Secret Access Key. Store the Secret Access Key in AWS Secrets Manager or encrypted parameter store, never in code repositories.</p>
+                </div>
+            </section>
+
+            <section class="lab-section" id="groups">
+                <h2>👥 User Groups</h2>
+                <p>Groups simplify permission management by allowing you to attach policies to multiple users at once.</p>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">CLI - Groups Management</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code><span class="comment"># Create group</span>
+<span class="command">aws iam create-group</span> --group-name Developers
+
+<span class="comment"># Attach managed policy to group</span>
+<span class="command">aws iam attach-group-policy</span> \
+    --group-name Developers \
+    --policy-arn arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess
+
+<span class="comment"># Add user to group</span>
+<span class="command">aws iam add-user-to-group</span> \
+    --group-name Developers \
+    --user-name developer-1
+
+<span class="comment"># List groups for user</span>
+<span class="command">aws iam list-groups-for-user</span> --user-name developer-1</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <section class="lab-section" id="policies">
+                <h2>📜 Custom Policies</h2>
+                <p>JSON policies define permissions using Effect, Action, Resource, and Condition elements.</p>
+
+                <h3>Example: S3 Read-Only for Specific Bucket</h3>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">Custom Policy JSON</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code>{
+    <span class="string">"Version"</span>: <span class="string">"2012-10-17"</span>,
+    <span class="string">"Statement"</span>: [
+        {
+            <span class="string">"Effect"</span>: <span class="string">"Allow"</span>,
+            <span class="string">"Action"</span>: [
+                <span class="string">"s3:GetObject"</span>,
+                <span class="string">"s3:ListBucket"</span>
+            ],
+            <span class="string">"Resource"</span>: [
+                <span class="string">"arn:aws:s3:::company-data-bucket"</span>,
+                <span class="string">"arn:aws:s3:::company-data-bucket/*"</span>
+            ],
+            <span class="string">"Condition"</span>: {
+                <span class="string">"StringEquals"</span>: {
+                    <span class="string">"aws:RequestedRegion"</span>: <span class="string">"us-east-1"</span>
+                }
+            }
+        }
+    ]
+}</code></pre>
+                    </div>
+                </div>
+
+                <h3>Example: EC2 Limited Access</h3>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">EC2 Developer Policy</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code>{
+    <span class="string">"Version"</span>: <span class="string">"2012-10-17"</span>,
+    <span class="string">"Statement"</span>: [
+        {
+            <span class="string">"Sid"</span>: <span class="string">"EC2LimitedAccess"</span>,
+            <span class="string">"Effect"</span>: <span class="string">"Allow"</span>,
+            <span class="string">"Action"</span>: [
+                <span class="string">"ec2:StartInstances"</span>,
+                <span class="string">"ec2:StopInstances"</span>,
+                <span class="string">"ec2:DescribeInstances"</span>,
+                <span class="string">"ec2:DescribeInstanceStatus"</span>
+            ],
+            <span class="string">"Resource"</span>: <span class="string">"*"</span>,
+            <span class="string">"Condition"</span>: {
+                <span class="string">"StringEquals"</span>: {
+                    <span class="string">"ec2:ResourceTag/Environment"</span>: <span class="string">"Development"</span>
+                }
+            }
+        }
+    ]
+}</code></pre>
+                    </div>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">Create and Attach Policy</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code><span class="comment"># Create policy from file</span>
+<span class="command">aws iam create-policy</span> \
+    --policy-name S3LimitedReadPolicy \
+    --policy-document file://s3-policy.json
+
+<span class="comment"># Attach policy to user</span>
+<span class="command">aws iam attach-user-policy</span> \
+    --user-name developer-1 \
+    --policy-arn arn:aws:iam::123456789012:policy/S3LimitedReadPolicy</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <section class="lab-section" id="roles">
+                <h2>🎭 IAM Roles</h2>
+                <p>Roles are used to delegate access to AWS services or external users without sharing credentials.</p>
+
+                <h3>EC2 Instance Role (Instance Profile)</h3>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">Create EC2 Role</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code><span class="comment"># Create trust policy for EC2</span>
+<span class="command">cat</span> &gt; trust-policy.json &lt;&lt; 'EOF'
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {"Service": "ec2.amazonaws.com"},
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+EOF
+
+<span class="comment"># Create role</span>
+<span class="command">aws iam create-role</span> \
+    --role-name EC2S3AccessRole \
+    --assume-role-policy-document file://trust-policy.json
+
+<span class="comment"># Attach S3 read policy to role</span>
+<span class="command">aws iam attach-role-policy</span> \
+    --role-name EC2S3AccessRole \
+    --policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+
+<span class="comment"># Create instance profile (required for EC2)</span>
+<span class="command">aws iam create-instance-profile</span> --instance-profile-name EC2S3Profile
+
+<span class="comment"># Add role to instance profile</span>
+<span class="command">aws iam add-role-to-instance-profile</span> \
+    --instance-profile-name EC2S3Profile \
+    --role-name EC2S3AccessRole</code></pre>
+                    </div>
+                </div>
+
+                <div class="info-box info">
+                    <div class="info-box-title">🔄 Using the Role</div>
+                    <p>When launching an EC2 instance, select the instance profile <code>EC2S3Profile</code> in the IAM role dropdown. The instance will automatically receive temporary credentials to access S3 without storing access keys.</p>
+                </div>
+            </section>
+
+            <section class="lab-section" id="cli">
+                <h2>⌨️ Essential IAM CLI</h2>
+                
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">IAM CLI Reference</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code><span class="comment"># Get current user info</span>
+<span class="command">aws sts get-caller-identity</span>
+
+<span class="comment"># List all users</span>
+<span class="command">aws iam list-users</span>
+
+<span class="comment"># List attached user policies</span>
+<span class="command">aws iam list-attached-user-policies</span> --user-name developer-1
+
+<span class="comment"># Simulate policy (test permissions)</span>
+<span class="command">aws iam simulate-principal-policy</span> \
+    --policy-source-arn arn:aws:iam::123456789012:user/developer-1 \
+    --action-names s3:GetObject s3:PutObject \
+    --resource-arns arn:aws:s3:::test-bucket/*
+
+<span class="comment"># Rotate access keys (security best practice)</span>
+<span class="command">aws iam update-access-key</span> \
+    --user-name developer-1 \
+    --access-key-id AKIA... \
+    --status Inactive
+
+<span class="comment"># Delete old access key after rotation</span>
+<span class="command">aws iam delete-access-key</span> \
+    --user-name developer-1 \
+    --access-key-id AKIA...</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <section class="lab-section" id="mistakes">
+                <h2>❌ Common Mistakes</h2>
+                
+                <div class="info-box error">
+                    <div class="info-box-title">Root Account Usage</div>
+                    <p><strong>Mistake:</strong> Using root account for daily tasks.<br>
+                    <strong>Fix:</strong> Create admin IAM user, enable MFA on root, lock away root credentials.</p>
+                </div>
+
+                <div class="info-box error">
+                    <div class="info-box-title">Overly Permissive Policies</div>
+                    <p><strong>Mistake:</strong> Using <code>"Resource": "*"</code> with wildcards for all actions.<br>
+                    <strong>Fix:</strong> Always specify exact ARNs and required actions only.</p>
+                </div>
+
+                <div class="info-box error">
+                    <div class="info-box-title">Hardcoded Credentials</div>
+                    <p><strong>Mistake:</strong> Storing access keys in code or Git.<br>
+                    <strong>Fix:</strong> Use IAM roles for EC2/Lambda, environment variables locally, AWS Secrets Manager for applications.</p>
+                </div>
+
+                <div class="info-box error">
+                    <div class="info-box-title">No MFA on Root/Admin</div>
+                    <p><strong>Mistake:</strong> Not enabling Multi-Factor Authentication.<br>
+                    <strong>Fix:</strong> Enable MFA on root account and all privileged IAM users immediately.</p>
+                </div>
+            </section>
+
+            <section class="lab-section" id="tasks">
+                <h2>🎯 Hands-On Tasks</h2>
+                
+                <div class="task-checklist">
+                    <h4>Task Checklist</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="iam-task1"> <label for="iam-task1">Create 3 users: admin (full access), developer (EC2/S3), viewer (read-only)</label></li>
+                        <li><input type="checkbox" id="iam-task2"> <label for="iam-task2">Write a custom policy that allows S3 access only during business hours (9-5)</label></li>
+                        <li><input type="checkbox" id="iam-task3"> <label for="iam-task3">Create an EC2 role that allows access to specific S3 bucket only</label></li>
+                        <li><input type="checkbox" id="iam-task4"> <label for="iam-task4">Set up MFA for your IAM user and test login process</label></li>
+                        <li><input type="checkbox" id="iam-task5"> <label for="iam-task5">Use AWS Policy Simulator to test a policy before applying it</label></li>
+                        <li><input type="checkbox" id="iam-task6"> <label for="iam-task6">Create a cross-account role that allows another AWS account to access your resources</label></li>
+                    </ul>
+                </div>
+
+                <div class="info-box tip">
+                    <div class="info-box-title">💡 Security Audit</div>
+                    <p>Use IAM Access Analyzer to identify resources shared with external entities. Enable AWS Config to track IAM policy changes over time.</p>
+                </div>
+            </section>
+
+            <div style="margin-top: 4rem; padding: 2rem; background: var(--aws-light); border-radius: 12px; text-align: center;">
+                <h3>Next Steps</h3>
+                <p>Build your network infrastructure in the <a href="vpc.html" style="color: var(--aws-orange); font-weight: 600;">VPC Networking Lab →</a></p>
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p>&copy; 2024 Cloud Hands-On Lab. Built for GitHub Pages.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../js/script.js"></script>
+</body>
+</html>
