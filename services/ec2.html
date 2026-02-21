@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AWS EC2 Hands-On Lab: Launch instances, configure security groups, install Apache/Nginx, and host static websites with step-by-step commands.">
+    <title>EC2 Lab - Launch Instances & Web Servers | Cloud Hands-On Lab</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="../index.html" class="nav-logo">
+                <span class="logo-icon">☁️</span>
+                <span class="logo-text">Cloud<span class="highlight">Lab</span></span>
+            </a>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+                <span class="hamburger"></span>
+            </button>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="../index.html" class="nav-link">Home</a></li>
+                <li class="dropdown">
+                    <a href="#" class="nav-link active">Services ▼</a>
+                    <ul class="dropdown-menu">
+                        <li><a href="ec2.html">EC2</a></li>
+                        <li><a href="s3.html">S3</a></li>
+                        <li><a href="iam.html">IAM</a></li>
+                        <li><a href="vpc.html">VPC</a></li>
+                        <li><a href="rds.html">RDS</a></li>
+                        <li><a href="cloudwatch.html">CloudWatch</a></li>
+                        <li><a href="loadbalancer.html">Load Balancer</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Page Header -->
+    <header class="page-header">
+        <h1>☁️ EC2 Hands-On Lab</h1>
+        <p>Launch virtual servers, configure security, and deploy web applications</p>
+    </header>
+
+    <!-- Lab Content -->
+    <div class="lab-content">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <h3>Lab Contents</h3>
+            <nav>
+                <ul class="sidebar-nav">
+                    <li><a href="#objective">Objective</a></li>
+                    <li><a href="#architecture">Architecture</a></li>
+                    <li><a href="#launch">Launch EC2 Instance</a></li>
+                    <li><a href="#connect">SSH Connection</a></li>
+                    <li><a href="#apache">Apache Installation</a></li>
+                    <li><a href="#nginx">Nginx Installation</a></li>
+                    <li><a href="#security">Security Groups</a></li>
+                    <li><a href="#website">Host Static Website</a></li>
+                    <li><a href="#verification">Verification</a></li>
+                    <li><a href="#mistakes">Common Mistakes</a></li>
+                    <li><a href="#tasks">Hands-On Tasks</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Objective -->
+            <section class="lab-section" id="objective">
+                <h2>🎯 Objective</h2>
+                <p>By the end of this lab, you will be able to launch an EC2 instance, connect via SSH, install and configure web servers (Apache and Nginx), set up security groups, and host a static website. These are fundamental skills for any AWS cloud practitioner or DevOps engineer.</p>
+                
+                <div class="info-box info">
+                    <div class="info-box-title">ℹ️ Prerequisites</div>
+                    <p>AWS account with access to EC2, SSH client installed (Terminal on Mac/Linux, PuTTY or Git Bash on Windows), and basic familiarity with Linux commands.</p>
+                </div>
+            </section>
+
+            <!-- Architecture -->
+            <section class="lab-section" id="architecture">
+                <h2>🏗️ Architecture Overview</h2>
+                <p>In this lab, we build a simple web hosting architecture:</p>
+                
+                <div class="arch-diagram">
+                    <div class="diagram-container">
+                        <div class="diagram-box">Internet</div>
+                        <div class="diagram-arrow">→</div>
+                        <div class="diagram-box">Security Group<br><small>(Ports 22, 80, 443)</small></div>
+                        <div class="diagram-arrow">→</div>
+                        <div class="diagram-box primary">EC2 Instance<br><small>(Amazon Linux/Ubuntu)</small></div>
+                        <div class="diagram-arrow">→</div>
+                        <div class="diagram-box">Web Server<br><small>(Apache/Nginx)</small></div>
+                    </div>
+                </div>
+                
+                <p>The security group acts as a virtual firewall, controlling inbound and outbound traffic. Port 22 allows SSH access, port 80 allows HTTP traffic, and port 443 allows HTTPS.</p>
+            </section>
+
+            <!-- Launch Instance -->
+            <section class="lab-section" id="launch">
+                <h2>🚀 Launch EC2 Instance</h2>
+                
+                <h3>Console Steps</h3>
+                <ol>
+                    <li>Sign in to AWS Management Console and navigate to EC2 Dashboard</li>
+                    <li>Click <strong>"Launch Instance"</strong></li>
+                    <li>Name your instance: <code>web-server-lab</code></li>
+                    <li>Select Amazon Machine Image (AMI):
+                        <ul>
+                            <li><strong>Option A:</strong> Amazon Linux 2023 (free tier eligible)</li>
+                            <li><strong>Option B:</strong> Ubuntu Server 22.04 LTS (free tier eligible)</li>
+                        </ul>
+                    </li>
+                    <li>Choose Instance Type: <code>t2.micro</code> (free tier)</li>
+                    <li>Create or select existing key pair (download .pem file)</li>
+                    <li>Network Settings: Create security group with:
+                        <ul>
+                            <li>SSH (port 22) from My IP</li>
+                            <li>HTTP (port 80) from Anywhere (0.0.0.0/0)</li>
+                        </ul>
+                    </li>
+                    <li>Storage: Keep default 8 GB</li>
+                    <li>Click <strong>"Launch Instance"</strong></li>
+                </ol>
+
+                <h3>CLI Commands (AWS CLI)</h3>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">AWS CLI</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code><span class="comment"># Create security group</span>
+<span class="command">aws ec2 create-security-group</span> \
+    --group-name web-server-sg \
+    --description "Security group for web server"
+
+<span class="comment"># Add inbound rules</span>
+<span class="command">aws ec2 authorize-security-group-ingress</span> \
+    --group-name web-server-sg \
+    --protocol tcp \
+    --port 22 \
+    --cidr $(curl -s ifconfig.me)/32
+
+<span class="command">aws ec2 authorize-security-group-ingress</span> \
+    --group-name web-server-sg \
+    --protocol tcp \
+    --port 80 \
+    --cidr 0.0.0.0/0
+
+<span class="comment"># Launch instance</span>
+<span class="command">aws ec2 run-instances</span> \
+    --image-id ami-0c55b159cbfafe1f0 \
+    --count 1 \
+    --instance-type t2.micro \
+    --key-name my-key-pair \
+    --security-groups web-server-sg</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SSH Connection -->
+            <section class="lab-section" id="connect">
+                <h2>🔌 Connect via SSH</h2>
+                
+                <div class="collapsible">
+                    <button class="collapsible-header">
+                        <span>📱 macOS / Linux</span>
+                        <span class="collapsible-icon">▼</span>
+                    </button>
+                    <div class="collapsible-content">
+                        <div class="collapsible-body">
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span class="code-label">Terminal</span>
+                                    <button class="copy-btn">📋 Copy</button>
+                                </div>
+                                <div class="code-content">
+                                    <pre><code><span class="comment"># Set correct permissions on key file</span>
+<span class="command">chmod 400</span> ~/Downloads/my-key-pair.pem
+
+<span class="comment"># Connect to instance (Amazon Linux)</span>
+<span class="command">ssh -i</span> ~/Downloads/my-key-pair.pem ec2-user@&lt;your-instance-ip&gt;
+
+<span class="comment"># Connect to instance (Ubuntu)</span>
+<span class="command">ssh -i</span> ~/Downloads/my-key-pair.pem ubuntu@&lt;your-instance-ip&gt;</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="collapsible">
+                    <button class="collapsible-header">
+                        <span>🪟 Windows (PuTTY)</span>
+                        <span class="collapsible-icon">▼</span>
+                    </button>
+                    <div class="collapsible-content">
+                        <div class="collapsible-body">
+                            <ol>
+                                <li>Convert .pem to .ppk using PuTTYgen</li>
+                                <li>Open PuTTY, enter Instance IP in Host Name</li>
+                                <li>Connection → SSH → Auth → Browse for .ppk file</li>
+                                <li>Click Open, login as <code>ec2-user</code> (Amazon Linux) or <code>ubuntu</code> (Ubuntu)</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-box tip">
+                    <div class="info-box-title">💡 Pro Tip</div>
+                    <p>Find your instance public IP in the EC2 Console → Instances → Select instance → Public IPv4 address. It looks like: <code>54.123.45.67</code></p>
+                </div>
+            </section>
+
+            <!-- Apache Installation -->
+            <section class="lab-section" id="apache">
+                <h2>🌐 Install Apache Web Server</h2>
+                
+                <div class="collapsible">
+                    <button class="collapsible-header">
+                        <span>Amazon Linux Commands</span>
+                        <span class="collapsible-icon">▼</span>
+                    </button>
+                    <div class="collapsible-content">
+                        <div class="collapsible-body">
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span class="code-label">Amazon Linux</span>
+                                    <button class="copy-btn">📋 Copy</button>
+                                </div>
+                                <div class="code-content">
+                                    <pre><code><span class="comment"># Update system packages</span>
+<span class="command">sudo yum update -y</span>
+
+<span class="comment"># Install Apache (httpd)</span>
+<span class="command">sudo yum install httpd -y</span>
+
+<span class="comment"># Start Apache service</span>
+<span class="command">sudo systemctl start httpd</span>
+
+<span class="comment"># Enable Apache to start on boot</span>
+<span class="command">sudo systemctl enable httpd</span>
+
+<span class="comment"># Check Apache status</span>
+<span class="command">sudo systemctl status httpd</span>
+
+<span class="comment"># Verify installation</span>
+<span class="command">curl http://localhost</span></code></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="collapsible">
+                    <button class="collapsible-header">
+                        <span>Ubuntu Commands</span>
+                        <span class="collapsible-icon">▼</span>
+                    </button>
+                    <div class="collapsible-content">
+                        <div class="collapsible-body">
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span class="code-label">Ubuntu</span>
+                                    <button class="copy-btn">📋 Copy</button>
+                                </div>
+                                <div class="code-content">
+                                    <pre><code><span class="comment"># Update package list</span>
+<span class="command">sudo apt update</span>
+
+<span class="comment"># Install Apache2</span>
+<span class="command">sudo apt install apache2 -y</span>
+
+<span class="comment"># Start Apache service</span>
+<span class="command">sudo systemctl start apache2</span>
+
+<span class="comment"># Enable Apache to start on boot</span>
+<span class="command">sudo systemctl enable apache2</span>
+
+<span class="comment"># Check Apache status</span>
+<span class="command">sudo systemctl status apache2</span>
+
+<span class="comment"># Verify installation</span>
+<span class="command">curl http://localhost</span></code></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-box info">
+                    <div class="info-box-title">📁 Document Root Locations</div>
+                    <p><strong>Amazon Linux:</strong> <code>/var/www/html/</code><br>
+                    <strong>Ubuntu:</strong> <code>/var/www/html/</code></p>
+                </div>
+            </section>
+
+            <!-- Nginx Installation -->
+            <section class="lab-section" id="nginx">
+                <h2>⚡ Install Nginx Web Server</h2>
+                
+                <div class="collapsible">
+                    <button class="collapsible-header">
+                        <span>Amazon Linux Commands</span>
+                        <span class="collapsible-icon">▼</span>
+                    </button>
+                    <div class="collapsible-content">
+                        <div class="collapsible-body">
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span class="code-label">Amazon Linux</span>
+                                    <button class="copy-btn">📋 Copy</button>
+                                </div>
+                                <div class="code-content">
+                                    <pre><code><span class="comment"># Install Nginx</span>
+<span class="command">sudo yum install nginx -y</span>
+
+<span class="comment"># Start Nginx service</span>
+<span class="command">sudo systemctl start nginx</span>
+
+<span class="comment"># Enable Nginx to start on boot</span>
+<span class="command">sudo systemctl enable nginx</span>
+
+<span class="comment"># Check Nginx status</span>
+<span class="command">sudo systemctl status nginx</span></code></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="collapsible">
+                    <button class="collapsible-header">
+                        <span>Ubuntu Commands</span>
+                        <span class="collapsible-icon">▼</span>
+                    </button>
+                    <div class="collapsible-content">
+                        <div class="collapsible-body">
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span class="code-label">Ubuntu</span>
+                                    <button class="copy-btn">📋 Copy</button>
+                                </div>
+                                <div class="code-content">
+                                    <pre><code><span class="comment"># Update package list</span>
+<span class="command">sudo apt update</span>
+
+<span class="comment"># Install Nginx</span>
+<span class="command">sudo apt install nginx -y</span>
+
+<span class="comment"># Start Nginx service</span>
+<span class="command">sudo systemctl start nginx</span>
+
+<span class="comment"># Enable Nginx to start on boot</span>
+<span class="command">sudo systemctl enable nginx</span>
+
+<span class="comment"># Check Nginx status</span>
+<span class="command">sudo systemctl status nginx</span></code></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-box warning">
+                    <div class="info-box-title">⚠️ Port Conflict</div>
+                    <p>Apache and Nginx both use port 80 by default. Stop Apache before starting Nginx:<br>
+                    <code>sudo systemctl stop httpd</code> (Amazon Linux) or <code>sudo systemctl stop apache2</code> (Ubuntu)</p>
+                </div>
+            </section>
+
+            <!-- Security Groups -->
+            <section class="lab-section" id="security">
+                <h2>🛡️ Configure Security Groups</h2>
+                <p>Security groups are stateful virtual firewalls that control traffic at the instance level.</p>
+                
+                <h3>Inbound Rules Required</h3>
+                <table style="width: 100%; border-collapse: collapse; margin: 1rem 0;">
+                    <thead style="background: var(--aws-navy); color: white;">
+                        <tr>
+                            <th style="padding: 1rem; text-align: left;">Type</th>
+                            <th style="padding: 1rem; text-align: left;">Port</th>
+                            <th style="padding: 1rem; text-align: left;">Source</th>
+                            <th style="padding: 1rem; text-align: left;">Purpose</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="border-bottom: 1px solid var(--aws-border);">
+                            <td style="padding: 1rem;">SSH</td>
+                            <td style="padding: 1rem;">22</td>
+                            <td style="padding: 1rem;">My IP</td>
+                            <td style="padding: 1rem;">Remote administration</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--aws-border);">
+                            <td style="padding: 1rem;">HTTP</td>
+                            <td style="padding: 1rem;">80</td>
+                            <td style="padding: 1rem;">Anywhere</td>
+                            <td style="padding: 1rem;">Web traffic</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 1rem;">HTTPS</td>
+                            <td style="padding: 1rem;">443</td>
+                            <td style="padding: 1rem;">Anywhere</td>
+                            <td style="padding: 1rem;">Secure web traffic</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">AWS CLI - Security Group Rules</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
