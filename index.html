@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AWS Hands-On Lab - Practical training for EC2, S3, IAM, VPC, RDS, CloudWatch, and Load Balancers. Step-by-step tutorials with real commands.">
+    <title>Cloud Hands-On Lab – AWS Practical Training</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">
+                <span class="logo-icon">☁️</span>
+                <span class="logo-text">Cloud<span class="highlight">Lab</span></span>
+            </a>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+                <span class="hamburger"></span>
+            </button>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="index.html" class="nav-link active">Home</a></li>
+                <li class="dropdown">
+                    <a href="#" class="nav-link">Services ▼</a>
+                    <ul class="dropdown-menu">
+                        <li><a href="services/ec2.html">EC2</a></li>
+                        <li><a href="services/s3.html">S3</a></li>
+                        <li><a href="services/iam.html">IAM</a></li>
+                        <li><a href="services/vpc.html">VPC</a></li>
+                        <li><a href="services/rds.html">RDS</a></li>
+                        <li><a href="services/cloudwatch.html">CloudWatch</a></li>
+                        <li><a href="services/loadbalancer.html">Load Balancer</a></li>
+                    </ul>
+                </li>
+                <li><a href="#about" class="nav-link">About</a></li>
+                <li><a href="#contact" class="nav-link">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="hero">
+        <div class="hero-content">
+            <h1>Master AWS Through <span class="gradient-text">Hands-On Practice</span></h1>
+            <p class="hero-subtitle">No theory dumping. Just real labs, real commands, real results. Build production-ready skills with step-by-step practical training.</p>
+            <div class="hero-cta">
+                <a href="#services" class="btn btn-primary">Start Learning</a>
+                <a href="services/ec2.html" class="btn btn-secondary">View EC2 Lab</a>
+            </div>
+        </div>
+        <div class="hero-visual">
+            <div class="aws-services-grid">
+                <div class="service-card mini">
+                    <span class="service-icon">🖥️</span>
+                    <span>EC2</span>
+                </div>
+                <div class="service-card mini">
+                    <span class="service-icon">📦</span>
+                    <span>S3</span>
+                </div>
+                <div class="service-card mini">
+                    <span class="service-icon">🔐</span>
+                    <span>IAM</span>
+                </div>
+                <div class="service-card mini">
+                    <span class="service-icon">🌐</span>
+                    <span>VPC</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Why Practical Learning -->
+    <section class="section why-practical" id="about">
+        <div class="container">
+            <h2 class="section-title">Why Hands-On Learning Works</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Learn by Doing</h3>
+                    <p>Research shows active learning improves retention by 75%. Every lab includes actual console steps and CLI commands you execute yourself.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Job-Ready Skills</h3>
+                    <p>Practice the exact scenarios you'll face in AWS certification exams and real-world DevOps roles. No filler content.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔧</div>
+                    <h3>Copy-Paste Commands</h3>
+                    <p>Every command is tested and ready to use. Includes both Amazon Linux and Ubuntu variations where applicable.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🛡️</div>
+                    <h3>Error Prevention</h3>
+                    <p>Each lab includes "Common Mistakes" sections based on real student errors. Learn what not to do before it happens.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Services Overview -->
+    <section class="section services-overview" id="services">
+        <div class="container">
+            <h2 class="section-title">Lab Modules</h2>
+            <p class="section-subtitle">Seven comprehensive hands-on labs covering core AWS services</p>
+            
+            <div class="services-grid">
+                <a href="services/ec2.html" class="service-link">
+                    <div class="service-card-large">
+                        <div class="service-header">
+                            <span class="service-badge compute">Compute</span>
+                            <h3>EC2</h3>
+                        </div>
+                        <p>Launch instances, configure security groups, install Apache/Nginx, host static websites, SSH connectivity.</p>
+                        <ul class="task-list">
+                            <li>✓ Launch EC2 Instance</li>
+                            <li>✓ SSH Connection</li>
+                            <li>✓ Web Server Setup</li>
+                            <li>✓ Security Groups</li>
+                        </ul>
+                        <span class="start-lab">Start Lab →</span>
+                    </div>
+                </a>
+
+                <a href="services/s3.html" class="service-link">
+                    <div class="service-card-large">
+                        <div class="service-header">
+                            <span class="service-badge storage">Storage</span>
+                            <h3>S3</h3>
+                        </div>
+                        <p>Create buckets, enable static website hosting, configure bucket policies, manage access control.</p>
+                        <ul class="task-list">
+                            <li>✓ Create Bucket</li>
+                            <li>✓ Static Hosting</li>
+                            <li>✓ Bucket Policies</li>
+                            <li>✓ Access Control</li>
+                        </ul>
+                        <span class="start-lab">Start Lab →</span>
+                    </div>
+                </a>
+
+                <a href="services/iam.html" class="service-link">
+                    <div class="service-card-large">
+                        <div class="service-header">
+                            <span class="service-badge security">Security</span>
+                            <h3>IAM</h3>
+                        </div>
+                        <p>Create users and groups, manage roles, write custom policies, implement least privilege access.</p>
+                        <ul class="task-list">
+                            <li>✓ Create Users</li>
+                            <li>✓ Manage Roles</li>
+                            <li>✓ Custom Policies</li>
+                            <li>✓ Access Keys</li>
+                        </ul>
+                        <span class="start-lab">Start Lab →</span>
+                    </div>
+                </a>
+
+                <a href="services/vpc.html" class="service-link">
+                    <div class="service-card-large">
+                        <div class="service-header">
+                            <span class="service-badge network">Network</span>
+                            <h3>VPC</h3>
+                        </div>
+                        <p>Build custom VPCs, create subnets, configure internet gateways, set up route tables, network ACLs.</p>
+                        <ul class="task-list">
+                            <li>✓ Custom VPC</li>
+                            <li>✓ Subnets</li>
+                            <li>✓ Internet Gateway</li>
+                            <li>✓ Route Tables</li>
+                        </ul>
+                        <span class="start-lab">Start Lab →</span>
+                    </div>
+                </a>
+
+                <a href="services/rds.html" class="service-link">
+                    <div class="service-card-large">
+                        <div class="service-header">
+                            <span class="service-badge database">Database</span>
+                            <h3>RDS</h3>
+                        </div>
+                        <p>Launch managed databases, configure security groups, connect from EC2, backup and restore operations.</p>
+                        <ul class="task-list">
+                            <li>✓ Launch Database</li>
+                            <li>✓ Security Groups</li>
+                            <li>✓ EC2 Connection</li>
+                            <li>✓ Snapshots</li>
+                        </ul>
+                        <span class="start-lab">Start Lab →</span>
+                    </div>
+                </a>
+
+                <a href="services/cloudwatch.html" class="service-link">
+                    <div class="service-card-large">
+                        <div class="service-header">
+                            <span class="service-badge monitoring">Monitoring</span>
+                            <h3>CloudWatch</h3>
+                        </div>
+                        <p>Set up monitoring dashboards, create alarms, configure notifications, analyze logs and metrics.</p>
+                        <ul class="task-list">
+                            <li>✓ Dashboards</li>
+                            <li>✓ Alarms</li>
+                            <li>✓ Notifications</li>
+                            <li>✓ Log Analysis</li>
+                        </ul>
+                        <span class="start-lab">Start Lab →</span>
+                    </div>
+                </a>
+
+                <a href="services/loadbalancer.html" class="service-link">
+                    <div class="service-card-large">
+                        <div class="service-header">
+                            <span class="service-badge balance">Load Balancing</span>
+                            <h3>Load Balancer</h3>
+                        </div>
+                        <p>Create target groups, register EC2 instances, configure health checks, distribute traffic.</p>
+                        <ul class="task-list">
+                            <li>✓ Target Groups</li>
+                            <li>✓ Attach EC2</li>
+                            <li>✓ Health Checks</li>
+                            <li>✓ Traffic Distribution</li>
+                        </ul>
+                        <span class="start-lab">Start Lab →</span>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Lab Structure -->
+    <section class="section lab-structure">
+        <div class="container">
+            <h2 class="section-title">Every Lab Follows This Structure</h2>
+            <div class="structure-timeline">
+                <div class="timeline-item">
+                    <div class="timeline-number">1</div>
+                    <div class="timeline-content">
+                        <h3>Objective</h3>
+                        <p>Clear statement of what you'll build and why it matters in production environments.</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-number">2</div>
+                    <div class="timeline-content">
+                        <h3>Architecture</h3>
+                        <p>Visual explanation of components and how they interact in the AWS ecosystem.</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-number">3</div>
+                    <div class="timeline-content">
+                        <h3>Console Steps</h3>
+                        <p>Click-by-click instructions with screenshots descriptions for AWS Management Console.</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-number">4</div>
+                    <div class="timeline-content">
+                        <h3>CLI Commands</h3>
+                        <p>Copy-paste ready commands with explanations. Includes both Amazon Linux and Ubuntu.</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-number">5</div>
+                    <div class="timeline-content">
+                        <h3>Verification</h3>
+                        <p>Expected outputs and how to confirm your setup is working correctly.</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-number">6</div>
+                    <div class="timeline-content">
+                        <h3>Common Mistakes</h3>
+                        <p>Pitfalls that trip up beginners and how to avoid them.</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-number">7</div>
+                    <div class="timeline-content">
+                        <h3>Hands-On Task</h3>
+                        <p>Independent challenge to reinforce learning without step-by-step instructions.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer" id="contact">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-section">
+                    <h4>Cloud Hands-On Lab</h4>
+                    <p>Practical AWS training for developers, DevOps engineers, and cloud architects. Build real skills through hands-on practice.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="services/ec2.html">EC2 Lab</a></li>
+                        <li><a href="services/s3.html">S3 Lab</a></li>
+                        <li><a href="services/iam.html">IAM Lab</a></li>
+                        <li><a href="services/vpc.html">VPC Lab</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Resources</h4>
+                    <ul>
+                        <li><a href="services/rds.html">RDS Lab</a></li>
+                        <li><a href="services/cloudwatch.html">CloudWatch Lab</a></li>
+                        <li><a href="services/loadbalancer.html">Load Balancer Lab</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Contact</h4>
+                    <p>Questions about the labs?</p>
+                    <a href="mailto:labs@cloudhandson.dev" class="contact-email">labs@cloudhandson.dev</a>
+                    <div class="social-links">
+                        <a href="#" aria-label="GitHub">📧</a>
+                        <a href="#" aria-label="Twitter">🐦</a>
+                        <a href="#" aria-label="LinkedIn">💼</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Cloud Hands-On Lab. Built for GitHub Pages. Free for educational use.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/script.js"></script>
+</body>
+</html>
