@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AWS VPC Hands-On Lab: Create custom VPCs, subnets, internet gateways, and route tables. Build secure network architectures step-by-step.">
+    <title>VPC Lab - Virtual Private Cloud | Cloud Hands-On Lab</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="../index.html" class="nav-logo">
+                <span class="logo-icon">☁️</span>
+                <span class="logo-text">Cloud<span class="highlight">Lab</span></span>
+            </a>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+                <span class="hamburger"></span>
+            </button>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="../index.html" class="nav-link">Home</a></li>
+                <li class="dropdown">
+                    <a href="#" class="nav-link active">Services ▼</a>
+                    <ul class="dropdown-menu">
+                        <li><a href="ec2.html">EC2</a></li>
+                        <li><a href="s3.html">S3</a></li>
+                        <li><a href="iam.html">IAM</a></li>
+                        <li><a href="vpc.html">VPC</a></li>
+                        <li><a href="rds.html">RDS</a></li>
+                        <li><a href="cloudwatch.html">CloudWatch</a></li>
+                        <li><a href="loadbalancer.html">Load Balancer</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <header class="page-header">
+        <h1>🌐 VPC Hands-On Lab</h1>
+        <p>Build custom network architectures with subnets, gateways, and routing</p>
+    </header>
+
+    <div class="lab-content">
+        <aside class="sidebar">
+            <h3>Lab Contents</h3>
+            <nav>
+                <ul class="sidebar-nav">
+                    <li><a href="#objective">Objective</a></li>
+                    <li><a href="#architecture">Architecture</a></li>
+                    <li><a href="#vpc">Create VPC</a></li>
+                    <li><a href="#subnets">Subnets</a></li>
+                    <li><a href="#igw">Internet Gateway</a></li>
+                    <li><a href="#routes">Route Tables</a></li>
+                    <li><a href="#nat">NAT Gateway</a></li>
+                    <li><a href="#cli">CLI Commands</a></li>
+                    <li><a href="#mistakes">Common Mistakes</a></li>
+                    <li><a href="#tasks">Hands-On Tasks</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <section class="lab-section" id="objective">
+                <h2>🎯 Objective</h2>
+                <p>Design and implement a secure, multi-tier VPC architecture with public and private subnets. Understand how traffic flows between subnets and the internet through gateways and route tables.</p>
+            </section>
+
+            <section class="lab-section" id="architecture">
+                <h2>🏗️ VPC Architecture</h2>
+                <div class="arch-diagram">
+                    <div class="diagram-container" style="flex-direction: column; gap: 1rem;">
+                        <div class="diagram-box">Internet</div>
+                        <div class="diagram-arrow">↓</div>
+                        <div style="display: flex; gap: 2rem; align-items: center;">
+                            <div class="diagram-box primary">Internet Gateway</div>
+                            <div style="color: var(--aws-gray);">←→</div>
+                            <div class="diagram-box">NAT Gateway<br><small>(EIP)</small></div>
+                        </div>
+                        <div class="diagram-arrow">↓</div>
+                        <div style="display: flex; gap: 2rem;">
+                            <div class="diagram-box" style="background: #dbeafe;">
+                                <strong>Public Subnet</strong><br>
+                                10.0.1.0/24<br>
+                                Web Servers<br>
+                                ALB
+                            </div>
+                            <div class="diagram-box" style="background: #dcfce7;">
+                                <strong>Private Subnet</strong><br>
+                                10.0.2.0/24<br>
+                                App Servers<br>
+                                RDS
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <p style="margin-top: 1rem; text-align: center; color: var(--aws-gray);">
+                    Public subnet has route to IGW (0.0.0.0/0 → igw-xxxx)<br>
+                    Private subnet has route to NAT (0.0.0.0/0 → nat-xxxx)
+                </p>
+            </section>
+
+            <section class="lab-section" id="vpc">
+                <h2>🌐 Create Custom VPC</h2>
+                
+                <h3>Console Steps</h3>
+                <ol>
+                    <li>VPC Console → <strong>Create VPC</strong></li>
+                    <li>Select <strong>"VPC and more"</strong> (creates all components automatically)</li>
+                    <li>Name tag: <code>production-vpc</code></li>
+                    <li>IPv4 CIDR: <code>10.0.0.0/16</code> (65,536 IPs)</li>
+                    <li>Tenancy: Default</li>
+                    <li>Number of AZs: 2</li>
+                    <li>Public subnets: 2 (10.0.1.0/24, 10.0.3.0/24)</li>
+                    <li>Private subnets: 2 (10.0.2.0/24, 10.0.4.0/24)</li>
+                    <li>NAT Gateways: 1 per AZ (or 1 for cost savings)</li>
+                    <li>Enable DNS hostnames and resolution</li>
+                </ol>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">AWS CLI - Create VPC</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code><span class="comment"># Create VPC</span>
+<span class="command">aws ec2 create-vpc</span> \
+    --cidr-block 10.0.0.0/16 \
+    --tag-specifications 'ResourceType=vpc,Tags=[{Key=Name,Value=production-vpc}]'
+
+<span class="comment"># Enable DNS hostnames (required for public DNS)</span>
+<span class="command">aws ec2 modify-vpc-attribute</span> \
+    --vpc-id vpc-xxxxxxxx \
+    --enable-dns-hostnames
+
+<span class="comment"># Create Internet Gateway</span>
+<span class="command">aws ec2 create-internet-gateway</span> \
+    --tag-specifications 'ResourceType=internet-gateway,Tags=[{Key=Name,Value=prod-igw}]'
+
+<span class="comment"># Attach IGW to VPC</span>
+<span class="command">aws ec2 attach-internet-gateway</span> \
+    --internet-gateway-id igw-xxxxxxxx \
+    --vpc-id vpc-xxxxxxxx</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <section class="lab-section" id="subnets">
+                <h2>📍 Create Subnets</h2>
+                
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">CLI - Subnet Creation</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code><span class="comment"># Get availability zones</span>
+<span class="command">aws ec2 describe-availability-zones</span> --region us-east-1
+
+<span class="comment"># Create public subnet in AZ-1</span>
+<span class="command">aws ec2 create-subnet</span> \
+    --vpc-id vpc-xxxxxxxx \
+    --cidr-block 10.0.1.0/24 \
+    --availability-zone us-east-1a \
+    --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=public-1a}]'
+
+<span class="comment"># Create private subnet in AZ-1</span>
+<span class="command">aws ec2 create-subnet</span> \
+    --vpc-id vpc-xxxxxxxx \
+    --cidr-block 10.0.2.0/24 \
+    --availability-zone us-east-1a \
+    --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=private-1a}]'
+
+<span class="comment"># Enable auto-assign public IP for public subnet</span>
+<span class="command">aws ec2 modify-subnet-attribute</span> \
+    --subnet-id subnet-xxxxxxxx \
+    --map-public-ip-on-launch</code></pre>
+                    </div>
+                </div>
+
+                <div class="info-box tip">
+                    <div class="info-box-title">💡 CIDR Calculation</div>
+                    <p>/16 = 65,536 IPs (VPC), /24 = 256 IPs (subnet). Reserve 5 IPs per subnet (network, router, DNS, future use). AWS reserves first 4 and last 1 IP in each subnet.</p>
+                </div>
+            </section>
+
+            <section class="lab-section" id="igw">
+                <h2>🚪 Internet Gateway</h2>
+                <p>The Internet Gateway (IGW) enables communication between your VPC and the internet.</p>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">IGW Setup</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code><span class="comment"># Describe IGWs</span>
+<span class="command">aws ec2 describe-internet-gateways</span>
+
+<span class="comment"># Detach IGW (if needed)</span>
+<span class="command">aws ec2 detach-internet-gateway</span> \
+    --internet-gateway-id igw-xxxxxxxx \
+    --vpc-id vpc-xxxxxxxx
+
+<span class="comment"># Delete IGW (cleanup)</span>
+<span class="command">aws ec2 delete-internet-gateway</span> --internet-gateway-id igw-xxxxxxxx</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <section class="lab-section" id="routes">
+                <h2>🛣️ Route Tables</h2>
+                <p>Route tables determine where network traffic is directed. Each subnet must be associated with a route table.</p>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">Route Table Configuration</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code><span class="comment"># Create public route table</span>
+<span class="command">aws ec2 create-route-table</span> \
+    --vpc-id vpc-xxxxxxxx \
+    --tag-specifications 'ResourceType=route-table,Tags=[{Key=Name,Value=public-rt}]'
+
+<span class="comment"># Add route to Internet Gateway (0.0.0.0/0 = all traffic)</span>
+<span class="command">aws ec2 create-route</span> \
+    --route-table-id rtb-xxxxxxxx \
+    --destination-cidr-block 0.0.0.0/0 \
+    --gateway-id igw-xxxxxxxx
+
+<span class="comment"># Associate route table with public subnet</span>
+<span class="command">aws ec2 associate-route-table</span> \
+    --route-table-id rtb-xxxxxxxx \
+    --subnet-id subnet-xxxxxxxx
+
+<span class="comment"># Describe route tables</span>
+<span class="command">aws ec2 describe-route-tables</span> --route-table-ids rtb-xxxxxxxx</code></pre>
+                    </div>
+                </div>
+
+                <div class="info-box info">
+                    <div class="info-box-title">🔄 Main Route Table</div>
+                    <p>The default (main) route table is automatically created with local route only. Leave it for private subnets or create explicit private route tables for better control.</p>
+                </div>
+            </section>
+
+            <section class="lab-section" id="nat">
+                <h2>🔒 NAT Gateway</h2>
+                <p>NAT Gateway allows private subnet instances to access the internet for updates/downloads while remaining inaccessible from outside.</p>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">NAT Gateway Setup</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code><span class="comment"># Allocate Elastic IP (required for NAT Gateway)</span>
+<span class="command">aws ec2 allocate-address</span> --domain vpc
+
+<span class="comment"># Create NAT Gateway in public subnet</span>
+<span class="command">aws ec2 create-nat-gateway</span> \
+    --subnet-id subnet-public-1a \
+    --allocation-id eipalloc-xxxxxxxx \
+    --tag-specifications 'ResourceType=natgateway,Tags=[{Key=Name,Value=prod-nat}]'
+
+<span class="comment"># Wait for NAT Gateway to become available, then create route</span>
+<span class="command">aws ec2 create-route</span> \
+    --route-table-id rtb-private-xxxxxxxx \
+    --destination-cidr-block 0.0.0.0/0 \
+    --nat-gateway-id nat-xxxxxxxx</code></pre>
+                    </div>
+                </div>
+
+                <div class="info-box warning">
+                    <div class="info-box-title">⚠️ NAT Gateway Costs</div>
+                    <p>NAT Gateway costs ~$0.045/hour (~$32/month) plus data processing fees. For development/labs, consider using a NAT Instance (t3.micro) or VPC Endpoints for S3/DynamoDB to reduce costs.</p>
+                </div>
+            </section>
+
+            <section class="lab-section" id="cli">
+                <h2>⌨️ Complete VPC CLI</h2>
+                
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-label">VPC Operations</span>
+                        <button class="copy-btn">📋 Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><code><span class="comment"># List all VPCs</span>
+<span class="command">aws ec2 describe-vpcs</span>
+
+<span class="comment"># List subnets in specific VPC</span>
+<span class="command">aws ec2 describe-subnets</span> \
+    --filters "Name=vpc-id,Values=vpc-xxxxxxxx"
+
+<span class="comment"># List security groups</span>
+<span class="command">aws ec2 describe-security-groups</span> \
+    --filters "Name=vpc-id,Values=vpc-xxxxxxxx"
+
+<span class="comment"># Create VPC Endpoint for S3 (no NAT needed for S3)</span>
+<span class="command">aws ec2 create-vpc-endpoint</span> \
+    --vpc-id vpc-xxxxxxxx \
+    --service-name com.amazonaws.us-east-1.s3 \
+    --route-table-ids rtb-private-xxxxxxxx
+
+<span class="comment"># Delete VPC (cleanup - must delete dependencies first)</span>
+<span class="command">aws ec2 delete-vpc</span> --vpc-id vpc-xxxxxxxx</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <section class="lab-section" id="mistakes">
+                <h2>❌ Common Mistakes</h2>
+                
+                <div class="info-box error">
+                    <div class="info-box-title">No Internet Access</div>
+                    <p><strong>Cause:</strong> Missing route to IGW (0.0.0.0/0) or subnet not associated with public route table.<br>
+                    <strong>Fix:</strong> Verify route table associations and routes.</p>
+                </div>
+
+                <div class="info-box error">
+                    <div class="info-box-title">Private Subnet Can't Update</div>
+                    <p><strong>Cause:</strong> No NAT Gateway or missing route to NAT in private route table.<br>
+                    <strong>Fix:</strong> Ensure NAT Gateway is in public subnet, and private route table has 0.0.0.0/0 → nat-xxx.</p>
+                </div>
+
+                <div class="info-box error">
+                    <div class="info-box-title">CIDR Overlap</div>
+                    <p><strong>Cause:</strong> VPC CIDR overlaps with on-premise network (common in hybrid setups).<br>
+                    <strong>Fix:</strong> Plan CIDR ranges carefully. Use 10.x.0.0/16 for AWS, 172.16.x.x for on-prem.</p>
+                </div>
+
+                <div class="info-box error">
+                    <div class="info-box-title">DNS Resolution Fails</div>
+                    <p><strong>Cause:</strong> DNS hostnames not enabled or custom DHCP options set incorrectly.<br>
+                    <strong>Fix:</strong> Enable DNS hostnames in VPC attributes.</p>
+                </div>
+            </section>
+
+            <section class="lab-section" id="tasks">
+                <h2>🎯 Hands-On Tasks</h2>
+                
+                <div class="task-checklist">
+                    <h4>Task Checklist</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="vpc-task1"> <label for="vpc-task1">Create a 3-tier VPC (Web, App, DB subnets) across 2 AZs</label></li>
+                        <li><input type="checkbox" id="vpc-task2"> <label for="vpc-task2">Launch an EC2 in private subnet and successfully run yum update through NAT</label></li>
+                        <li><input type="checkbox" id="vpc-task3"> <label for="vpc-task3">Set up VPC Flow Logs and analyze traffic patterns</label></li>
+                        <li><input type="checkbox" id="vpc-task4"> <label for="vpc-task4">Create VPC Endpoints for S3 and DynamoDB to avoid NAT costs</label></li>
+                        <li><input type="checkbox" id="vpc-task5"> <label for="vpc-task5">Configure Network ACLs as additional security layer</label></li>
+                        <li><input type="checkbox" id="vpc-task6"> <label for="vpc-task6">Set up VPC Peering between two VPCs and test connectivity</label></li>
+                    </ul>
+                </div>
+
+                <div class="info-box tip">
+                    <div class="info-box-title">💡 Production Tip</div>
+                    <p>Use AWS Transit Gateway for connecting multiple VPCs and on-premise networks. For simple multi-VPC setups, VPC Peering is sufficient but doesn't support transitive routing.</p>
+                </div>
+            </section>
+
+            <div style="margin-top: 4rem; padding: 2rem; background: var(--aws-light); border-radius: 12px; text-align: center;">
+                <h3>Next Steps</h3>
+                <p>Set up managed databases in the <a href="rds.html" style="color: var(--aws-orange); font-weight: 600;">RDS Database Lab →</a></p>
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p>&copy; 2024 Cloud Hands-On Lab. Built for GitHub Pages.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../js/script.js"></script>
+</body>
+</html>
